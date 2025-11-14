@@ -1,49 +1,57 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
+
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService,
-  ) { }
-  async check(req: any) {
-    try {
-      const userPayload = req.user;
+  constructor(private readonly prisma: PrismaService) { }
 
-      if (!userPayload) {
-        throw new UnauthorizedException('Token không hợp lệ!');
-      }
-      const existAccount = await this.prisma.accountsUser.findUnique({
-        where: {
-          id: userPayload.sub,
-        },
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-        }
-      });
-      if (!existAccount) {
-        throw new UnauthorizedException('Token không hợp lệ!');
-      }
+  async check(accountPayload: any) {
+    if (!accountPayload) {
+      throw new UnauthorizedException('Token không hợp lệ!');
+    }
 
+    const id = accountPayload.sub;
+    const user = await this.prisma.accountsUser.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+      },
+    });
+
+    if (user) {
       return {
         code: "success",
         message: "Token hợp lệ!",
-        infoUser: {
-          id: existAccount.id,
-          fullName: existAccount.fullName,
-          email: existAccount.email,
-        }
+        infoUser: user
       };
-
-    } catch (error) {
-      return { code: 'error', message: 'Lỗi server!' };
     }
+    const company = await this.prisma.accountCompany.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        companyName: true,
+        email: true,
+      },
+    });
+
+    if (company) {
+      return {
+        code: "success",
+        message: "Token hợp lệ!",
+        infoCompany: company
+      };
+    }
+
+    throw new UnauthorizedException('Token không hợp lệ!');
   }
+
   async logout(res: any) {
-    res.clearCookie('jwt');
+    res.clearCookie('token');
     return {
       code: "success",
-      message: "Đã đăng xuất!"
-    }
+      message: 'Đã đăng xuất!',
+    };
   }
 }
