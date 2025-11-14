@@ -19,3 +19,23 @@ model AccountsUser {
 
   @@map("accounts_user")
 }
+
+model AccountCompany {
+  id               String   @id @default(uuid()) @map("company_id")
+  companyName      String   @map("company_name")
+  email            String   @unique @map("company_email")
+  password         String   @map("company_password")
+  city             String?  @map("company_city")
+  address          String?  @map("company_address")
+  companyModel     String?  @map("company_model")
+  companyEmployees String?  @map("company_employees")
+  workingTime      String?  @map("company_working_time")
+  workOvertime     String?  @map("company_work_overtime")
+  phone            String?  @map("company_phone")
+  description      String?  @map("company_description")
+  logo             String?  @map("company_logo")
+  createdAt        DateTime @default(now()) @map("company_created_at")
+  updatedAt        DateTime @updatedAt @map("company_updated_at")
+
+  @@map("accounts_company")
+}

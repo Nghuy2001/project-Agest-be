@@ -39,4 +39,11 @@ export class AuthService {
       return { code: 'error', message: 'Lỗi server!' };
     }
   }
+  async logout(res: any) {
+    res.clearCookie('jwt');
+    return {
+      code: "success",
+      message: "Đã đăng xuất!"
+    }
+  }
 }
