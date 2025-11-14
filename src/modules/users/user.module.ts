@@ -3,9 +3,10 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { PrismaModule } from 'src/core/prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
+import { CloudinaryModule } from 'src/core/cloudinary/cloudinary.module';
 
 @Module({
-  imports: [PrismaModule,
+  imports: [PrismaModule, CloudinaryModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,

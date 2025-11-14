@@ -17,6 +17,8 @@ export class AuthService {
         id: true,
         fullName: true,
         email: true,
+        avatar: true,
+        phone: true
       },
     });
 

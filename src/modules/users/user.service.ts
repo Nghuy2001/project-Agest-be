@@ -68,4 +68,23 @@ export class UserService {
       message: "Đăng nhập thành công!",
     }
   }
+  async updateProfile(body: any, req, avatarUrl?: string) {
+    const updateData: any = {
+      fullName: body.fullName,
+      email: body.email,
+      phone: body.phone,
+    };
+    if (avatarUrl) {
+      updateData.avatar = avatarUrl;
+    }
+    await this.prisma.accountsUser.update({
+      where: { id: req.account.sub },
+      data: updateData,
+    });
+
+    return {
+      code: "success",
+      message: 'Cập nhật thành công'
+    };
+  }
 }
