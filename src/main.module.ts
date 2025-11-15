@@ -3,10 +3,11 @@ import { UserModule } from './modules/users/user.module';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CompanyModule } from './modules/companies/company.module';
+import { CityModule } from './core/cities/city.module';
 
 
 @Module({
-  imports: [PrismaModule, UserModule, CompanyModule, AuthModule],
+  imports: [PrismaModule, CityModule, UserModule, CompanyModule, AuthModule],
   controllers: [],
   providers: [],
 })

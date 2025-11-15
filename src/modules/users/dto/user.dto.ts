@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, MinLength, MaxLength, Matches, IsOptional } from 'class-validator';
 
 export class RegisterDto {
   @IsNotEmpty({ message: 'Vui lòng nhập họ tên!' })
@@ -46,4 +46,23 @@ export class LoginDto {
     message: 'Mật khẩu phải chứa ít nhất một ký tự đặc biệt!',
   })
   password: string;
+}
+
+export class UpdateProfileDto {
+
+  @IsOptional()
+  @MinLength(5, { message: 'Họ tên phải có ít nhất 5 ký tự!' })
+  @MaxLength(50, { message: 'Họ tên không được vượt quá 50 ký tự!' })
+  fullName?: string;
+
+  @IsOptional()
+  @IsEmail({}, { message: 'Email không đúng định dạng!' })
+  email?: string;
+
+  @IsOptional()
+  @Matches(/^\d{10,11}$/, {
+    message: 'Số điện thoại phải chứa 10–11 chữ số!',
+  })
+  phone?: string;
+
 }

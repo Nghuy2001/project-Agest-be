@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  candidate
+  employer
+}
+
 model AccountsUser {
   id        String   @id @default(uuid()) @map("user_id")
   fullName  String   @map("user_full_name")
@@ -14,6 +19,7 @@ model AccountsUser {
   password  String   @map("user_password")
   avatar    String?  @map("user_avatar")
   phone     String?  @map("user_phone")
+  role      Role     @default(candidate) @map("user_role")
   createdAt DateTime @default(now()) @map("user_created_at")
   updatedAt DateTime @updatedAt @map("user_updated_at")
 
@@ -25,7 +31,7 @@ model AccountCompany {
   companyName      String   @map("company_name")
   email            String   @unique @map("company_email")
   password         String   @map("company_password")
-  city             String?  @map("company_city")
+  cityId           String?  @map("company_city")
   address          String?  @map("company_address")
   companyModel     String?  @map("company_model")
   companyEmployees String?  @map("company_employees")
@@ -34,8 +40,19 @@ model AccountCompany {
   phone            String?  @map("company_phone")
   description      String?  @map("company_description")
   logo             String?  @map("company_logo")
+  role             Role     @default(employer) @map("company_role")
   createdAt        DateTime @default(now()) @map("company_created_at")
   updatedAt        DateTime @updatedAt @map("company_updated_at")
+  city             City?    @relation(fields: [cityId], references: [id])
 
   @@map("accounts_company")
+}
+
+model City {
+  id   String @id @default(uuid()) @map("city_id")
+  name String @unique @map("city_name")
+
+  companies AccountCompany[]
+
+  @@map("cities")
 }

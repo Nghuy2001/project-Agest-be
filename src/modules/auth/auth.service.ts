@@ -10,7 +10,7 @@ export class AuthService {
       throw new UnauthorizedException('Token không hợp lệ!');
     }
 
-    const id = accountPayload.sub;
+    const id = accountPayload.id;
     const user = await this.prisma.accountsUser.findUnique({
       where: { id },
       select: {
@@ -24,9 +24,7 @@ export class AuthService {
 
     if (user) {
       return {
-        code: "success",
-        message: "Token hợp lệ!",
-        infoUser: user
+        infoUser: user,
       };
     }
     const company = await this.prisma.accountCompany.findUnique({
@@ -35,14 +33,21 @@ export class AuthService {
         id: true,
         companyName: true,
         email: true,
+        cityId: true,
+        address: true,
+        companyModel: true,
+        companyEmployees: true,
+        workingTime: true,
+        workOvertime: true,
+        description: true,
+        logo: true,
+        phone: true
       },
     });
 
     if (company) {
       return {
-        code: "success",
-        message: "Token hợp lệ!",
-        infoCompany: company
+        infoCompany: company,
       };
     }
 

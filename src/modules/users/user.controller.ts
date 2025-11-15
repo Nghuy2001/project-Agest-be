@@ -1,11 +1,12 @@
-import { Body, Controller, Patch, Post, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Patch, Post, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
-import { LoginDto, RegisterDto } from './dto/user.dto';
+import { LoginDto, RegisterDto, UpdateProfileDto } from './dto/user.dto';
 import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from 'src/core/cloudinary/cloudinary.service';
 import { UploadApiResponse } from 'cloudinary';
-import { JwtAuthGuard } from 'src/core/common/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CandidateGuard } from './guards/user.guard';
 
 @Controller('user')
 export class UserController {
@@ -23,18 +24,24 @@ export class UserController {
     return this.userService.login(loginDto, res);
   }
   @Patch('profile')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, CandidateGuard)
   @UseInterceptors(FileInterceptor('avatar'))
   async updateProfile(
     @UploadedFile() avatar: Express.Multer.File,
-    @Body() body: any,
+    @Body() body: UpdateProfileDto,
     @Request() req
   ) {
     let uploadedImage: UploadApiResponse | null = null;
+
     if (avatar) {
       uploadedImage = await this.cloudinary.uploadImage(avatar);
     }
-
-    return this.userService.updateProfile(body, req, uploadedImage?.secure_url || undefined);
+    const account = req.account;
+    return await this.userService.updateProfile(
+      body,
+      account,
+      uploadedImage?.secure_url || undefined,
+    );
   }
+
 }

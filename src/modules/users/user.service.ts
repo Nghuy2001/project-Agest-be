@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { LoginDto, RegisterDto } from './dto/user.dto';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import bcrypt from "bcryptjs";
@@ -15,10 +15,7 @@ export class UserService {
     });
 
     if (existingUser) {
-      return {
-        code: "error",
-        message: "Email đã tồn tại!"
-      }
+      throw new BadRequestException("Email đã tồn tại!");
     }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(data.password, salt);
@@ -31,10 +28,7 @@ export class UserService {
       },
     });
 
-    return {
-      code: "success",
-      message: "Đăng ký thành công!"
-    }
+    return { message: "Đăng ký thành công!" };
   }
 
   async login(data: LoginDto, res: Response) {
@@ -43,19 +37,13 @@ export class UserService {
     });
 
     if (!existingUser) {
-      return {
-        code: "error",
-        message: "Email không tồn tại trong hệ thống!"
-      }
+      throw new BadRequestException("Email không tồn tại!");
     }
     const isPasswordValid = await bcrypt.compare(data.password, `${existingUser.password}`);
     if (!isPasswordValid) {
-      return {
-        code: "error",
-        message: "Mật khẩu không đúng!"
-      }
+      throw new UnauthorizedException("Mật khẩu không đúng!");
     }
-    const payload = { sub: existingUser.id, username: existingUser.email };
+    const payload = { id: existingUser.id, username: existingUser.email, role: existingUser.role };
     const token = await this.jwtService.signAsync(payload);
     res.cookie('token', token, {
       httpOnly: true,
@@ -63,28 +51,43 @@ export class UserService {
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 * 7,
     });
-    return {
-      code: "success",
-      message: "Đăng nhập thành công!",
-    }
+    return { message: "Đăng nhập thành công!" };
   }
-  async updateProfile(body: any, req, avatarUrl?: string) {
-    const updateData: any = {
-      fullName: body.fullName,
-      email: body.email,
-      phone: body.phone,
-    };
-    if (avatarUrl) {
-      updateData.avatar = avatarUrl;
-    }
-    await this.prisma.accountsUser.update({
-      where: { id: req.account.sub },
-      data: updateData,
-    });
+  async updateProfile(body: any, account: any, avatarUrl?: string) {
+    try {
+      if (avatarUrl) body.avatar = avatarUrl;
+      else {
+        delete body.avatar;
+      }
+      for (const key in body) {
+        if (body[key] === '') {
+          body[key] = null;
+        }
+      }
+      if (body.email) {
+        const existEmail = await this.prisma.accountsUser.findFirst({
+          where: {
+            email: body.email,
+            NOT: { id: account.id }
+          }
+        });
 
-    return {
-      code: "success",
-      message: 'Cập nhật thành công'
-    };
+        if (existEmail) {
+          throw new BadRequestException("Email này đã được sử dụng!");
+        }
+      }
+
+      await this.prisma.accountsUser.update({
+        where: { id: account.id },
+        data: body,
+      });
+
+      return {
+        code: "success",
+        message: "Cập nhật thành công!"
+      };
+    } catch (error) {
+      throw new BadRequestException("Không thể cập nhật hồ sơ!");
+    }
   }
 }

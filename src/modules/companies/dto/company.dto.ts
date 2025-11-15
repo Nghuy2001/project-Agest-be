@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, MaxLength, MinLength, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, MaxLength, MinLength, Matches, IsOptional, IsString } from 'class-validator';
 
 export class RegisterDto {
   @IsNotEmpty({ message: 'Vui lòng nhập tên công ty!' })
@@ -38,4 +38,51 @@ export class LoginDto {
     message: "Mật khẩu phải chứa ít nhất một ký tự đặc biệt!",
   })
   password: string;
+}
+
+
+export class UpdateCompanyDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(200, { message: 'Tên công ty không được vượt quá 200 ký tự!' })
+  companyName?: string;
+
+  @IsOptional()
+  @IsEmail({}, { message: 'Email không đúng định dạng!' })
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  cityId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255, { message: 'Địa chỉ quá dài!' })
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  companyModel?: string;
+
+  @IsOptional()
+  @IsString()
+  companyEmployees?: string;
+
+  @IsOptional()
+  @IsString()
+  workingTime?: string;
+
+  @IsOptional()
+  @IsString()
+  workOvertime?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20, { message: 'Số điện thoại không hợp lệ!' })
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
 }

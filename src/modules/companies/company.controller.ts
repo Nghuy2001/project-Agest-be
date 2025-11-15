@@ -1,11 +1,18 @@
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Body, Controller, Patch, Post, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CompanyService } from './company.service';
-import { LoginDto, RegisterDto } from './dto/company.dto';
+import { LoginDto, RegisterDto, UpdateCompanyDto } from './dto/company.dto';
 import type { Response } from 'express';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UploadApiResponse } from 'cloudinary';
+import { CloudinaryService } from 'src/core/cloudinary/cloudinary.service';
+import { EmployerGuard } from './guards/company.guard';
 
 @Controller('company')
 export class CompanyController {
-  constructor(private readonly companyService: CompanyService) { }
+  constructor(private readonly companyService: CompanyService,
+    private cloudinary: CloudinaryService,
+  ) { }
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
@@ -15,5 +22,20 @@ export class CompanyController {
   async login(@Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response) {
     return this.companyService.login(loginDto, res);
+  }
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard, EmployerGuard)
+  @UseInterceptors(FileInterceptor('logo'))
+  async updateProfile(
+    @UploadedFile() logo: Express.Multer.File,
+    @Body() body: UpdateCompanyDto,
+    @Request() req
+  ) {
+    let uploadedImage: UploadApiResponse | null = null;
+    if (logo) {
+      uploadedImage = await this.cloudinary.uploadImage(logo);
+    }
+    const id = req.account.id;
+    return this.companyService.updateProfile(body, id, uploadedImage?.secure_url || undefined);
   }
 }
