@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { LoginDto, RegisterDto } from './dto/company.dto';
 import bcrypt from "bcryptjs";
 import { Response } from 'express';
+import { connect } from 'http2';
 @Injectable()
 export class CompanyService {
   constructor(private readonly prisma: PrismaService,
@@ -82,8 +83,8 @@ export class CompanyService {
   async createJob(body: any, companyId: any, images?: string[]) {
     try {
       const dataToCreate: any = { ...body };
-      dataToCreate.salaryMin = parseInt(dataToCreate.salaryMin) || 0;
-      dataToCreate.salaryMax = parseInt(dataToCreate.salaryMax) || 0;
+      dataToCreate.salaryMin = parseInt(dataToCreate.salaryMin ?? '0', 10);
+      dataToCreate.salaryMax = parseInt(dataToCreate.salaryMax ?? '0', 10);
 
       if (dataToCreate.technologies) {
         dataToCreate.technologies = dataToCreate.technologies
@@ -98,8 +99,15 @@ export class CompanyService {
         if (dataToCreate[key] === "") dataToCreate[key] = null;
       });
 
-      dataToCreate.companyId = companyId;
-      await this.prisma.job.create({ data: dataToCreate });
+
+      await this.prisma.job.create({
+        data: {
+          ...dataToCreate,
+          company: {
+            connect: { id: companyId }
+          }
+        },
+      });
       return {
         code: "success",
         message: "Tạo công việc thành công!"
@@ -219,5 +227,24 @@ export class CompanyService {
       );
     }
 
+  }
+
+  async deleteJob(companyAccount: any, id: string) {
+    try {
+      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
+      if (!jobDetail) {
+        throw new NotFoundException("ID công việc không tồn tại!");
+      }
+      await this.prisma.job.delete({ where: { id: id } });
+      return {
+        code: "success",
+        message: "Xóa công việc thành công!"
+      };
+    } catch (error) {
+      throw new HttpException(
+        "Lỗi server, vui lòng thử lại sau!",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 }

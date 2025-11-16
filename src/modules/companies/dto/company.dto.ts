@@ -100,15 +100,19 @@ export class CreateJobDto {
   salaryMax: string;
 
   @IsOptional()
+  @IsString()
   position?: string;
 
   @IsOptional()
+  @IsString()
   workingForm?: string;
 
   @IsOptional()
+  @IsString()
   technologies?: string;
 
   @IsOptional()
+  @IsString()
   description?: string;
 }
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import { CreateJobDto, LoginDto, RegisterDto, UpdateCompanyDto, UpdateJobDto } from './dto/company.dto';
 import type { Response } from 'express';
@@ -90,5 +90,11 @@ export class CompanyController {
     }
 
     return this.companyService.patchJobDetail(req.account, body, id, uploadedImages);
+  }
+
+  @Delete('job/delete/:id')
+  @UseGuards(JwtAuthGuard, EmployerGuard)
+  async deleteJob(@Request() req, @Param('id') id: string) {
+    return this.companyService.deleteJob(req.account, id);
   }
 }
