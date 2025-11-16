@@ -109,4 +109,49 @@ export class CompanyService {
       throw new BadRequestException("Không thể tạo công việc!");
     }
   }
+  async getJobList(companyAccount: any) {
+    const jobs = await this.prisma.job.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    const accountCompany = await this.prisma.accountCompany.findUnique({
+      where: { id: companyAccount.id },
+    });
+    if (!accountCompany) {
+      return {
+        code: "error",
+        message: "Không tìm thấy thông tin công ty!",
+      };
+    }
+    let cityName: string | undefined = undefined;
+
+    if (typeof accountCompany.cityId === "string" && accountCompany.cityId.trim() !== "") {
+      const city = await this.prisma.city.findUnique({
+        where: { id: accountCompany.cityId },
+      });
+      cityName = city?.name;
+    }
+
+    const dataFinal: any[] = [];
+    for (const item of jobs) {
+      dataFinal.push({
+        id: item.id,
+        companyLogo: accountCompany.logo,
+        title: item.title,
+        companyName: accountCompany.companyName,
+        salaryMin: item.salaryMin,
+        salaryMax: item.salaryMax,
+        position: item.position,
+        workingForm: item.workingForm,
+        companyCity: cityName,
+        technologies: item.technologies,
+      });
+    }
+    return {
+      code: "success",
+      message: "Lấy danh sách công việc thành công!",
+      dataFinal
+    }
+  }
 }

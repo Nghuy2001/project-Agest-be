@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, Post, Request, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Request, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import { CreateJobDto, LoginDto, RegisterDto, UpdateCompanyDto } from './dto/company.dto';
 import type { Response } from 'express';
@@ -60,4 +60,10 @@ export class CompanyController {
     );
   }
 
+  @Get('job/list')
+  @UseGuards(JwtAuthGuard, EmployerGuard)
+  async getJobList(@Request() req) {
+    const accountCompany = req.account;
+    return this.companyService.getJobList(accountCompany);
+  }
 }
