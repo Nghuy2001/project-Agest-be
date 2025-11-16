@@ -97,4 +97,9 @@ export class CompanyController {
   async deleteJob(@Request() req, @Param('id') id: string) {
     return this.companyService.deleteJob(req.account, id);
   }
+
+  @Get('list')
+  async listCompanies(@Query('limitItems') limitItems: string) {
+    return this.companyService.listCompanies(limitItems);
+  }
 }

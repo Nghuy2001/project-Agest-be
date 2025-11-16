@@ -247,4 +247,40 @@ export class CompanyService {
       );
     }
   }
+
+  async listCompanies(limitItems: string) {
+    let limitItem = 12;
+    if (limitItems !== undefined && !isNaN(Number(limitItems))) {
+      limitItem = Number(limitItems);
+    }
+    const companyList = await this.prisma.accountCompany.findMany({
+      take: limitItem,
+      orderBy: { createdAt: "desc" },
+    });
+    const companyListFinal: any = [];
+    for (const company of companyList) {
+      const dataItemFinal = {
+        id: company.id,
+        logo: company.logo,
+        companyName: company.companyName,
+        cityName: "",
+        totalJob: 0
+      }
+      if (company.cityId && company.cityId.trim() !== "") {
+        const city = await this.prisma.city.findUnique({ where: { id: company.cityId } });
+        dataItemFinal.cityName = `${city?.name}`;
+      }
+
+      const totalJob = await this.prisma.job.count({ where: { companyId: company.id } });
+      dataItemFinal.totalJob = totalJob;
+      companyListFinal.push(dataItemFinal);
+    }
+
+
+    return {
+      code: "success",
+      message: "Lấy danh sách công ty thành công!",
+      companyListFinal
+    }
+  }
 }
