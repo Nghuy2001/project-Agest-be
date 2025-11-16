@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto, RegisterDto } from './dto/company.dto';
@@ -168,5 +168,56 @@ export class CompanyService {
       dataFinal,
       totalPage
     }
+  }
+  async getJobDetail(companyAccount: any, id: string) {
+    try {
+      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
+      if (!jobDetail) {
+        throw new NotFoundException("ID công việc không tồn tại!");
+      }
+
+      return {
+        code: "success",
+        message: "Lấy thông tin công việc thành công!",
+        jobDetail: jobDetail
+      }
+    } catch (error) {
+      throw new HttpException(
+        "Lỗi server, vui lòng thử lại sau!",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+
+  }
+  async patchJobDetail(companyAccount: any, body: any, id: string, images?: string[]) {
+    try {
+      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
+      if (!jobDetail) {
+        throw new NotFoundException("ID công việc không tồn tại!");
+      }
+      const dataToUpdate: any = { ...body };
+      dataToUpdate.salaryMin = body.salaryMin !== undefined ? (body.salaryMin !== "" ? parseInt(body.salaryMin) || 0 : 0) : jobDetail.salaryMin;
+      dataToUpdate.salaryMax = body.salaryMax !== undefined ? (body.salaryMax !== "" ? parseInt(body.salaryMax) || 0 : 0) : jobDetail.salaryMax;
+      dataToUpdate.technologies = body.technologies !== undefined ? (body.technologies ? body.technologies.split(",").map((t) => t.trim()) : []) : jobDetail.technologies;
+      dataToUpdate.images = images && images.length > 0 ? images : jobDetail.images;
+      Object.keys(dataToUpdate).forEach((key) => {
+        if (dataToUpdate[key] === "") dataToUpdate[key] = null;
+      });
+      await this.prisma.job.update({
+        where: { id },
+        data: dataToUpdate,
+      });
+
+      return {
+        code: "success",
+        message: "Cập nhật thành công!",
+      }
+    } catch (error) {
+      throw new HttpException(
+        "Lỗi server, vui lòng thử lại sau!",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+
   }
 }

@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Patch, Post, Query, Request, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CompanyService } from './company.service';
-import { CreateJobDto, LoginDto, RegisterDto, UpdateCompanyDto } from './dto/company.dto';
+import { CreateJobDto, LoginDto, RegisterDto, UpdateCompanyDto, UpdateJobDto } from './dto/company.dto';
 import type { Response } from 'express';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
@@ -66,5 +66,29 @@ export class CompanyController {
     const accountCompany = req.account;
     const pageNumber = page ? parseInt(page, 10) : 1;
     return this.companyService.getJobList(accountCompany, pageNumber);
+  }
+  @Get('job/edit/:id')
+  @UseGuards(JwtAuthGuard, EmployerGuard)
+  async getJobDetail(@Request() req, @Param('id') id: string) {
+    const accountCompany = req.account;
+    return this.companyService.getJobDetail(accountCompany, id);
+  }
+  @Patch('job/edit/:id')
+  @UseGuards(JwtAuthGuard, EmployerGuard)
+  @UseInterceptors(FilesInterceptor('images', 12))
+  async patchJobDetail(
+    @UploadedFiles() images: Express.Multer.File[],
+    @Body() body: UpdateJobDto,
+    @Request() req,
+    @Param('id') id: string) {
+    let uploadedImages: string[] = [];
+
+    if (images && images.length > 0) {
+      const uploadPromises = images.map(file => this.cloudinary.uploadImage(file));
+      const results = await Promise.all(uploadPromises);
+      uploadedImages = results.map(r => r.secure_url);
+    }
+
+    return this.companyService.patchJobDetail(req.account, body, id, uploadedImages);
   }
 }

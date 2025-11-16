@@ -1,3 +1,4 @@
+import { PartialType } from '@nestjs/mapped-types';
 import { IsEmail, IsNotEmpty, MaxLength, MinLength, Matches, IsOptional, IsString, IsInt, Min, IsArray, IsNumberString } from 'class-validator';
 
 export class RegisterDto {
@@ -111,3 +112,4 @@ export class CreateJobDto {
   description?: string;
 }
 
+export class UpdateJobDto extends PartialType(CreateJobDto) { }
