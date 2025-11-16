@@ -109,11 +109,25 @@ export class CompanyService {
       throw new BadRequestException("Không thể tạo công việc!");
     }
   }
-  async getJobList(companyAccount: any) {
+  async getJobList(companyAccount: any, page: number) {
+    const find = {
+      companyId: companyAccount.id,
+    };
+    const limitItems = 2;
+    page = Number(page);
+    if (!page || page <= 0) page = 1;
+    const totalRecord = await this.prisma.job.count({
+      where: find,
+    });
+    const totalPage = Math.ceil(totalRecord / limitItems);
+
+    const skip = (page - 1) * limitItems;
+
     const jobs = await this.prisma.job.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
+      where: find,
+      orderBy: { createdAt: "desc" },
+      take: limitItems,
+      skip: skip,
     });
     const accountCompany = await this.prisma.accountCompany.findUnique({
       where: { id: companyAccount.id },
@@ -151,7 +165,8 @@ export class CompanyService {
     return {
       code: "success",
       message: "Lấy danh sách công việc thành công!",
-      dataFinal
+      dataFinal,
+      totalPage
     }
   }
 }
