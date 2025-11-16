@@ -70,7 +70,6 @@ export class CompanyService {
         where: { id: id },
         data: body,
       });
-      console.log(body)
       return {
         code: "success",
         message: "Cập nhật thành công!"

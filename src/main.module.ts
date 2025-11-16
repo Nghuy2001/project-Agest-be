@@ -4,10 +4,11 @@ import { PrismaModule } from './core/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CompanyModule } from './modules/companies/company.module';
 import { CityModule } from './core/cities/city.module';
+import { UploadModule } from './core/uploads/upload.module';
 
 
 @Module({
-  imports: [PrismaModule, CityModule, UserModule, CompanyModule, AuthModule],
+  imports: [PrismaModule, UploadModule, CityModule, UserModule, CompanyModule, AuthModule],
   controllers: [],
   providers: [],
 })
