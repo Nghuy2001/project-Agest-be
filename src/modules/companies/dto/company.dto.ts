@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, MaxLength, MinLength, Matches, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, MaxLength, MinLength, Matches, IsOptional, IsString, IsInt, Min, IsArray, IsNumberString } from 'class-validator';
 
 export class RegisterDto {
   @IsNotEmpty({ message: 'Vui lòng nhập tên công ty!' })
@@ -86,3 +86,28 @@ export class UpdateCompanyDto {
   description?: string;
 
 }
+
+
+export class CreateJobDto {
+  @IsNotEmpty({ message: "Vui lòng nhập tên công việc!" })
+  title: string;
+
+  @IsNumberString({}, { message: "Mức lương tối thiểu không hợp lệ!" })
+  salaryMin: string;
+
+  @IsNumberString({}, { message: "Mức lương tối đa không hợp lệ!" })
+  salaryMax: string;
+
+  @IsOptional()
+  position?: string;
+
+  @IsOptional()
+  workingForm?: string;
+
+  @IsOptional()
+  technologies?: string;
+
+  @IsOptional()
+  description?: string;
+}
+

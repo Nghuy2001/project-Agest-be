@@ -78,4 +78,35 @@ export class CompanyService {
       throw new BadRequestException("Không thể cập nhật hồ sơ!");
     }
   }
+
+  async createJob(body: any, companyId: any, images?: string[]) {
+    try {
+      const dataToCreate: any = { ...body };
+      dataToCreate.salaryMin = parseInt(dataToCreate.salaryMin) || 0;
+      dataToCreate.salaryMax = parseInt(dataToCreate.salaryMax) || 0;
+
+      if (dataToCreate.technologies) {
+        dataToCreate.technologies = dataToCreate.technologies
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
+      } else {
+        dataToCreate.technologies = [];
+      }
+      dataToCreate.images = images || [];
+      Object.keys(dataToCreate).forEach(key => {
+        if (dataToCreate[key] === "") dataToCreate[key] = null;
+      });
+
+      dataToCreate.companyId = companyId;
+      await this.prisma.job.create({ data: dataToCreate });
+      return {
+        code: "success",
+        message: "Tạo công việc thành công!"
+      };
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException("Không thể tạo công việc!");
+    }
+  }
 }
