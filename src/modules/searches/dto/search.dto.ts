@@ -24,4 +24,12 @@ export class SearchJobDto {
   @IsOptional()
   @IsString()
   workingForm?: string;
+
+  @IsOptional()
+  @IsString()
+  page?: string;
+
+  @IsOptional()
+  @IsString()
+  limit?: string;
 }

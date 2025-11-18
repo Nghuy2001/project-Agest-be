@@ -7,8 +7,11 @@ import { createSearch } from 'src/core/helpers/createSearch';
 export class SearchService {
   constructor(private readonly prisma: PrismaService) { }
   async search(query: SearchJobDto) {
-    const { language, city, company, keyword, position, workingForm } = query;
+    const { language, city, company, keyword, position, workingForm, page } = query;
     const find: any = {};
+    let totalPage = 0;
+    let totalRecord = 0;
+
     if (keyword || language) {
       find.AND = [];
 
@@ -43,9 +46,27 @@ export class SearchService {
     if (workingForm) {
       find.workingForm = workingForm;
     }
-
+    const limitItems = 2;
+    let currentPage = 1
+    if (page && parseInt(`${page}`) > 0) {
+      currentPage = parseInt(`${page}`);
+    }
+    totalRecord = await this.prisma.job.count({ where: find });
+    totalPage = Math.ceil(totalRecord / limitItems);
+    if (currentPage > totalPage && totalPage > 0) {
+      return {
+        code: "success",
+        message: 'Tìm kiếm việc làm thành công!',
+        jobs: [],
+        totalPage: totalPage,
+        totalRecord: totalRecord
+      };
+    }
+    const skipItems = (currentPage - 1) * limitItems;
     const jobs = await this.prisma.job.findMany({
       where: find,
+      take: limitItems,
+      skip: skipItems,
       include: {
         company: {
           include: { city: true }
@@ -69,8 +90,10 @@ export class SearchService {
 
     return {
       code: "success",
-      message: 'Lấy danh sách thành phố thành công!',
-      jobs: dataFinal
+      message: 'Tìm kiếm việc làm thành công!',
+      jobs: dataFinal,
+      totalPage: totalPage,
+      totalRecord: totalRecord
     };
   }
 }
