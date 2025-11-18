@@ -1,14 +1,45 @@
-import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, Post, Request, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { JobService } from "./job.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { EmployerGuard } from "../companies/guards/company.guard";
+import { CandidateGuard } from "../users/guards/user.guard";
+import { UploadApiResponse } from "cloudinary";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { CloudinaryService } from "src/core/cloudinary/cloudinary.service";
+import { JobApplyDto } from "./dto/job.dto";
 
 @Controller('job')
 export class JobController {
-  constructor(private readonly jobService: JobService) { }
+  constructor(private readonly jobService: JobService,
+    private cloudinary: CloudinaryService,
+  ) { }
 
   @Get('detail/:id')
   async getJobDetail(@Param('id') slug: string) {
     return this.jobService.getJobDetail(slug);
+  }
+  @Post('apply')
+  @UseGuards(JwtAuthGuard, CandidateGuard)
+  @UseInterceptors(FileInterceptor('fileCV', {
+    fileFilter: (req, file, callback) => {
+      if (!file.originalname.match(/\.(pdf)$/)) {
+        return callback(
+          new BadRequestException('Chỉ cho phép upload file PDF!'),
+          false,
+        );
+      }
+      callback(null, true);
+    },
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
+  async jobApply(
+    @UploadedFile() logo: Express.Multer.File,
+    @Body() body: JobApplyDto,
+    @Request() req
+  ) {
+    let uploadedImage: UploadApiResponse | null = null;
+    if (logo) {
+      uploadedImage = await this.cloudinary.uploadImage(logo);
+    }
+    return this.jobService.jobApply(body, req.account, uploadedImage?.secure_url || undefined);
   }
 }

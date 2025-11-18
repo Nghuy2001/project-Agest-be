@@ -22,6 +22,7 @@ model AccountsUser {
   role      Role     @default(candidate) @map("user_role")
   createdAt DateTime @default(now()) @map("user_created_at")
   updatedAt DateTime @updatedAt @map("user_updated_at")
+  cvs       CV[]
 
   @@map("accounts_user")
 }
@@ -77,6 +78,33 @@ model Job {
   updatedAt DateTime @updatedAt @map("job_updated_at")
 
   company AccountCompany @relation(fields: [companyId], references: [id])
+  cvs     CV[]
 
   @@map("jobs")
+}
+
+model CV {
+  id        String   @id @default(ulid()) @map("cv_id")
+  jobId     String   @map("cv_job_id")
+  userId    String   @map("cv_user_id")
+  fullName  String   @map("cv_full_name")
+  email     String   @map("cv_email")
+  phone     String?  @map("cv_phone")
+  fileCV    String   @map("cv_file")
+  viewed    Boolean  @default(false) @map("cv_viewed")
+  status    CVStatus @default(pending) @map("cv_status")
+  createdAt DateTime @default(now()) @map("cv_created_at")
+  updatedAt DateTime @updatedAt @map("cv_updated_at")
+
+  job  Job          @relation(fields: [jobId], references: [id])
+  user AccountsUser @relation(fields: [userId], references: [id])
+
+  @@map("cvs")
+}
+
+enum CVStatus {
+  pending
+  viewed
+  contacted
+  rejected
 }
