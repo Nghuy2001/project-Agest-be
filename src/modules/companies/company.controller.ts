@@ -99,7 +99,7 @@ export class CompanyController {
   }
 
   @Get('list')
-  async listCompanies(@Query('limitItems') limitItems: string) {
-    return this.companyService.listCompanies(limitItems);
+  async listCompanies(@Query() query: { pageSize?: string; page?: string }) {
+    return this.companyService.listCompanies(query);
   }
 }

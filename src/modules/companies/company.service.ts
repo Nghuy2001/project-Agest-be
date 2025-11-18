@@ -241,11 +241,16 @@ export class CompanyService {
     }
   }
 
-  async listCompanies(limitItems: string) {
-    const limit = Number(limitItems) || 12;
-
+  async listCompanies(query: any) {
+    const pageSize = Number(query.pageSize) || 2;
+    let page = Number(query.page);
+    if (!page || page <= 0) page = 1;
+    const totalRecord = await this.prisma.accountCompany.count();
+    const totalPage = Math.ceil(totalRecord / pageSize);
+    const skip = (page - 1) * pageSize;
     const companies = await this.prisma.accountCompany.findMany({
-      take: limit,
+      take: pageSize,
+      skip: skip,
       orderBy: { createdAt: "desc" },
       include: {
         city: true,
@@ -266,7 +271,8 @@ export class CompanyService {
     return {
       code: "success",
       message: "Lấy danh sách công ty thành công!",
-      companyListFinal: finalData
+      companyListFinal: finalData,
+      totalPage
     };
   }
 }
