@@ -7,7 +7,7 @@ export class AuthService {
 
   async check(accountPayload: any) {
     if (!accountPayload) {
-      throw new UnauthorizedException('Token không hợp lệ!');
+      throw new UnauthorizedException('Invalid Token!');
     }
 
     const id = accountPayload.id;
@@ -22,11 +22,7 @@ export class AuthService {
       },
     });
 
-    if (user) {
-      return {
-        infoUser: user,
-      };
-    }
+    if (user) return { infoUser: user };
     const company = await this.prisma.accountCompany.findUnique({
       where: { id },
       select: {
@@ -44,21 +40,16 @@ export class AuthService {
         phone: true
       },
     });
+    if (company) return { infoCompany: company };
 
-    if (company) {
-      return {
-        infoCompany: company,
-      };
-    }
-
-    throw new UnauthorizedException('Token không hợp lệ!');
+    throw new UnauthorizedException('Invalid Token!');
   }
 
   async logout(res: any) {
     res.clearCookie('token');
     return {
       code: "success",
-      message: 'Đã đăng xuất!',
+      message: 'Signed out!',
     };
   }
 }

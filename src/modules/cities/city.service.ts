@@ -8,7 +8,7 @@ export class CityService {
     const cityList = await this.prisma.city.findMany()
     return {
       code: "success",
-      message: 'Lấy danh sách thành phố thành công!',
+      message: 'City list fetched successfully',
       cityList
     };
   }

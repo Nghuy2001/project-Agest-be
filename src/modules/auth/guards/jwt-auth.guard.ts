@@ -9,14 +9,15 @@ export class JwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const token = request.cookies?.token;
 
-    if (!token) throw new UnauthorizedException('Token không hợp lệ!');
+    if (!token) throw new UnauthorizedException('Invalid Token!');
 
     try {
       const payload = this.jwtService.verify(token);
       request.account = payload;
       return true;
-    } catch {
-      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn!');
+    } catch (error) {
+      console.error("JWT Verify Error:", error);
+      throw new UnauthorizedException('Token is invalid or expired!');
     }
   }
 }

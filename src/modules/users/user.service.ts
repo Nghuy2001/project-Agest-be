@@ -4,6 +4,7 @@ import { PrismaService } from 'src/core/prisma/prisma.service';
 import bcrypt from "bcryptjs";
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
+import { cleanObject } from 'src/core/helpers/cleanObject';
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService,
@@ -39,6 +40,10 @@ export class UserService {
     if (!existingUser) {
       throw new BadRequestException("Email không tồn tại!");
     }
+    if (existingUser.role !== "candidate") {
+      throw new ForbiddenException("Bạn không có quyền đăng nhập ở khu vực này!");
+    }
+
     const isPasswordValid = await bcrypt.compare(data.password, `${existingUser.password}`);
     if (!isPasswordValid) {
       throw new UnauthorizedException("Mật khẩu không đúng!");
@@ -59,15 +64,11 @@ export class UserService {
       else {
         delete body.avatar;
       }
-      for (const key in body) {
-        if (body[key] === '') {
-          body[key] = null;
-        }
-      }
-      if (body.email) {
+      const data = cleanObject(body);
+      if (data.email) {
         const existEmail = await this.prisma.accountsUser.findFirst({
           where: {
-            email: body.email,
+            email: data.email,
             NOT: { id: account.id }
           }
         });
@@ -79,7 +80,7 @@ export class UserService {
 
       await this.prisma.accountsUser.update({
         where: { id: account.id },
-        data: body,
+        data: data,
       });
 
       return {

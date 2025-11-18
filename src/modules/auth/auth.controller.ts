@@ -5,10 +5,11 @@ import type { Response } from 'express';
 
 
 @Controller('auth')
-@UseGuards(JwtAuthGuard)
+
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
   @Get('check')
+  @UseGuards(JwtAuthGuard)
   async check(@Req() req, @Res({ passthrough: true }) res: Response) {
     try {
       return this.authService.check(req.account);

@@ -31,11 +31,8 @@ export class UserController {
     @Body() body: UpdateProfileDto,
     @Request() req
   ) {
-    let uploadedImage: UploadApiResponse | null = null;
+    const uploadedImage = avatar ? await this.cloudinary.uploadImage(avatar) : null;
 
-    if (avatar) {
-      uploadedImage = await this.cloudinary.uploadImage(avatar);
-    }
     const account = req.account;
     return await this.userService.updateProfile(
       body,

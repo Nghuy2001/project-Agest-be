@@ -1,10 +1,11 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto, RegisterDto } from './dto/company.dto';
 import bcrypt from "bcryptjs";
 import { Response } from 'express';
-import { connect } from 'http2';
+import { cleanObject } from 'src/core/helpers/cleanObject';
+import { createSearch } from 'src/core/helpers/createSearch';
 @Injectable()
 export class CompanyService {
   constructor(private readonly prisma: PrismaService,
@@ -41,6 +42,10 @@ export class CompanyService {
     if (!existsCompany) {
       throw new BadRequestException("Email không tồn tại!");
     }
+    if (existsCompany.role !== "employer") {
+      throw new ForbiddenException("Bạn không có quyền đăng nhập ở khu vực này!");
+    }
+
     const isPasswordValid = await bcrypt.compare(password, `${existsCompany.password}`);
     if (!isPasswordValid) {
       throw new UnauthorizedException("Mật khẩu không đúng!");
@@ -81,41 +86,30 @@ export class CompanyService {
   }
 
   async createJob(body: any, companyId: any, images?: string[]) {
-    try {
-      const dataToCreate: any = { ...body };
-      dataToCreate.salaryMin = parseInt(dataToCreate.salaryMin ?? '0', 10);
-      dataToCreate.salaryMax = parseInt(dataToCreate.salaryMax ?? '0', 10);
+    const dataToCreate: any = { ...body };
+    dataToCreate.salaryMin = parseInt(dataToCreate.salaryMin ?? '0', 10);
+    dataToCreate.salaryMax = parseInt(dataToCreate.salaryMax ?? '0', 10);
 
-      if (dataToCreate.technologies) {
-        dataToCreate.technologies = dataToCreate.technologies
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean);
-      } else {
-        dataToCreate.technologies = [];
-      }
-      dataToCreate.images = images || [];
-      Object.keys(dataToCreate).forEach(key => {
-        if (dataToCreate[key] === "") dataToCreate[key] = null;
-      });
+    dataToCreate.technologies = dataToCreate.technologies
+      ? dataToCreate.technologies.split(",").map(t => t.trim()).filter(Boolean)
+      : [];
+    dataToCreate.images = images || [];
+    const data = cleanObject(dataToCreate);
+    data.search = createSearch(`${data.title} ${data.technologies.join(" ")}`);
+    await this.prisma.job.create({
+      data: {
+        ...data,
+        company: {
+          connect: { id: companyId }
+        }
+      },
+    });
 
+    return {
+      code: "success",
+      message: "Tạo công việc thành công!"
+    };
 
-      await this.prisma.job.create({
-        data: {
-          ...dataToCreate,
-          company: {
-            connect: { id: companyId }
-          }
-        },
-      });
-      return {
-        code: "success",
-        message: "Tạo công việc thành công!"
-      };
-    } catch (error) {
-      console.log(error);
-      throw new BadRequestException("Không thể tạo công việc!");
-    }
   }
   async getJobList(companyAccount: any, page: number) {
     const find = {
@@ -208,12 +202,11 @@ export class CompanyService {
       dataToUpdate.salaryMax = body.salaryMax !== undefined ? (body.salaryMax !== "" ? parseInt(body.salaryMax) || 0 : 0) : jobDetail.salaryMax;
       dataToUpdate.technologies = body.technologies !== undefined ? (body.technologies ? body.technologies.split(",").map((t) => t.trim()) : []) : jobDetail.technologies;
       dataToUpdate.images = images && images.length > 0 ? images : jobDetail.images;
-      Object.keys(dataToUpdate).forEach((key) => {
-        if (dataToUpdate[key] === "") dataToUpdate[key] = null;
-      });
+      const data = cleanObject(dataToUpdate);
+      data.search = createSearch(`${data.title} ${data.technologies.join(" ")}`);
       await this.prisma.job.update({
         where: { id },
-        data: dataToUpdate,
+        data: data,
       });
 
       return {
@@ -249,38 +242,31 @@ export class CompanyService {
   }
 
   async listCompanies(limitItems: string) {
-    let limitItem = 12;
-    if (limitItems !== undefined && !isNaN(Number(limitItems))) {
-      limitItem = Number(limitItems);
-    }
-    const companyList = await this.prisma.accountCompany.findMany({
-      take: limitItem,
+    const limit = Number(limitItems) || 12;
+
+    const companies = await this.prisma.accountCompany.findMany({
+      take: limit,
       orderBy: { createdAt: "desc" },
+      include: {
+        city: true,
+        _count: {
+          select: { jobs: true }
+        }
+      }
     });
-    const companyListFinal: any = [];
-    for (const company of companyList) {
-      const dataItemFinal = {
-        id: company.id,
-        logo: company.logo,
-        companyName: company.companyName,
-        cityName: "",
-        totalJob: 0
-      }
-      if (company.cityId && company.cityId.trim() !== "") {
-        const city = await this.prisma.city.findUnique({ where: { id: company.cityId } });
-        dataItemFinal.cityName = `${city?.name}`;
-      }
 
-      const totalJob = await this.prisma.job.count({ where: { companyId: company.id } });
-      dataItemFinal.totalJob = totalJob;
-      companyListFinal.push(dataItemFinal);
-    }
-
+    const finalData = companies.map(c => ({
+      id: c.id,
+      logo: c.logo,
+      companyName: c.companyName,
+      cityName: c.city?.name || "",
+      totalJob: c._count.jobs
+    }));
 
     return {
       code: "success",
       message: "Lấy danh sách công ty thành công!",
-      companyListFinal
-    }
+      companyListFinal: finalData
+    };
   }
 }
