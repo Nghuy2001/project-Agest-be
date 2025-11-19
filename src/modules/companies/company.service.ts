@@ -424,4 +424,34 @@ export class CompanyService {
       );
     }
   }
+  async changeStatusPatch(body: any, companyId: string) {
+    try {
+      const infoCV = await this.prisma.cV.findUnique({
+        where: { id: body.id }
+      })
+      if (!infoCV) throw new NotFoundException("Invalid company ID!");
+      const infoJob = await this.prisma.job.findFirst({
+        where: {
+          id: infoCV.jobId,
+          companyId: companyId
+        }
+      })
+      if (!infoJob) {
+        throw new ForbiddenException("You do not have permission to log in here!");
+      }
+      await this.prisma.cV.update({
+        where: { id: body.id },
+        data: { status: body.action },
+      });
+      return {
+        code: "success",
+        message: ""
+      }
+    } catch (error) {
+      throw new HttpException(
+        "Server error, please try again later",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
 }

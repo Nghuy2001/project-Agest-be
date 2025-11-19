@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CompanyService } from './company.service';
-import { CreateJobDto, LoginDto, RegisterDto, UpdateCompanyDto, UpdateJobDto } from './dto/company.dto';
+import { ChangeStatusDto, CreateJobDto, LoginDto, RegisterDto, UpdateCompanyDto, UpdateJobDto } from './dto/company.dto';
 import type { Response } from 'express';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
@@ -118,5 +118,11 @@ export class CompanyController {
   @UseGuards(JwtAuthGuard, EmployerGuard)
   async cvDetail(@Param('id') id: string, @Request() req) {
     return this.companyService.cvDetail(id, req.account.id);
+  }
+
+  @Patch('cv/change-status')
+  @UseGuards(JwtAuthGuard, EmployerGuard)
+  async changeStatusPatch(@Request() req, @Body() body: ChangeStatusDto) {
+    return this.companyService.changeStatusPatch(body, req.account.id);
   }
 }
