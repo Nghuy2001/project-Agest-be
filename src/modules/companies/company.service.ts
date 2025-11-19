@@ -454,4 +454,36 @@ export class CompanyService {
       );
     }
   }
+  async deleteCV(companyId: any, id: string) {
+    try {
+      const infoCV = await this.prisma.cV.findFirst({ where: { id: id } });
+      if (!infoCV) {
+        throw new NotFoundException("CV ID does not exist!");
+      }
+      const infoJob = await this.prisma.job.findFirst({
+        where: {
+          id: infoCV.jobId,
+          companyId: companyId
+        }
+      })
+      if (!infoJob) {
+        throw new ForbiddenException("You do not have permission to log in here!");
+      }
+      await this.prisma.cV.delete({
+        where: {
+          id: id
+        }
+      })
+      return {
+        code: "success",
+        message: "CV deleted successfully!"
+      };
+    } catch (error) {
+      throw new HttpException(
+        "Server error, please try again later!",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
 }

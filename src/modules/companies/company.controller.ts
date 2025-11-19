@@ -125,4 +125,10 @@ export class CompanyController {
   async changeStatusPatch(@Request() req, @Body() body: ChangeStatusDto) {
     return this.companyService.changeStatusPatch(body, req.account.id);
   }
+  @Delete('cv/delete/:id')
+  @UseGuards(JwtAuthGuard, EmployerGuard)
+  async deleteCV(@Request() req, @Param('id') id: string) {
+    return this.companyService.deleteCV(req.account.id, id);
+  }
+
 }
