@@ -108,4 +108,10 @@ export class CompanyController {
   async detailCompany(@Param('id') id: string) {
     return this.companyService.detailCompany(id);
   }
+
+  @Get('cv/list')
+  @UseGuards(JwtAuthGuard, EmployerGuard)
+  async cvList(@Request() req) {
+    return this.companyService.cvList(req.account.id);
+  }
 }

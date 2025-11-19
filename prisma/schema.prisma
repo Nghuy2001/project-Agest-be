@@ -92,7 +92,7 @@ model CV {
   phone     String?  @map("cv_phone")
   fileCV    String   @map("cv_file")
   viewed    Boolean  @default(false) @map("cv_viewed")
-  status    CVStatus @default(pending) @map("cv_status")
+  status    CVStatus @default(initial) @map("cv_status")
   createdAt DateTime @default(now()) @map("cv_created_at")
   updatedAt DateTime @updatedAt @map("cv_updated_at")
 
@@ -103,8 +103,7 @@ model CV {
 }
 
 enum CVStatus {
-  pending
-  viewed
-  contacted
+  initial
+  approved
   rejected
 }

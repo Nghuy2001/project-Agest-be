@@ -327,4 +327,53 @@ export class CompanyService {
       );
     }
   }
+
+  async cvList(id: string) {
+    const listJob = await this.prisma.job.findMany({
+      where: { companyId: id }
+    })
+    const listJobId = listJob.map(item => item.id)
+    const listCV = await this.prisma.cV.findMany({
+      where: {
+        jobId: {
+          in: listJobId
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    })
+    const dataFinal: any = []
+    for (const item of listCV) {
+      const dataItemFinal = {
+        id: item.id,
+        jobTitle: "",
+        fullName: item.fullName,
+        email: item.email,
+        phone: item.phone,
+        jobSalaryMin: 0,
+        jobSalaryMax: 0,
+        jobPosition: "",
+        jobWorkingForm: "",
+        viewed: item.viewed,
+        status: item.status,
+      }
+      const infoJob = await this.prisma.job.findFirst({
+        where: { id: item.jobId }
+      })
+      if (infoJob) {
+        dataItemFinal.jobTitle = `${infoJob.title}`;
+        dataItemFinal.jobSalaryMin = parseInt(`${infoJob.salaryMin}`);
+        dataItemFinal.jobSalaryMax = parseInt(`${infoJob.salaryMax}`);
+        dataItemFinal.jobPosition = `${infoJob.position}`;
+        dataItemFinal.jobWorkingForm = `${infoJob.workingForm}`;
+      }
+      dataFinal.push(dataItemFinal);
+    }
+    return {
+      code: "success",
+      message: "",
+      dataFinal
+    }
+  }
 }
