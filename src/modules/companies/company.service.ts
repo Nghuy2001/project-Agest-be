@@ -372,8 +372,56 @@ export class CompanyService {
     }
     return {
       code: "success",
-      message: "",
+      message: "CV list retrieved successfully",
       dataFinal
+    }
+  }
+  async cvDetail(cvId: string, companyId: string) {
+    try {
+      const infoCV = await this.prisma.cV.findUnique({
+        where: {
+          id: cvId
+        }
+      });
+      if (!infoCV) throw new NotFoundException(`CV with id ${cvId} not found`)
+
+      const infoJob = await this.prisma.job.findFirst({
+        where: {
+          id: infoCV.jobId,
+          companyId: companyId
+        }
+      })
+      if (!infoJob) throw new ForbiddenException('You do not have permission to access this resource');
+      const dataFinalCV = {
+        fullName: infoCV.fullName,
+        email: infoCV.email,
+        phone: infoCV.phone,
+        fileCV: infoCV.fileCV
+      }
+      const dataFinalJob = {
+        id: infoJob.id,
+        title: infoJob.title,
+        salaryMin: infoJob.salaryMin,
+        salaryMax: infoJob.salaryMax,
+        position: infoJob.position,
+        workingForm: infoJob.workingForm,
+        technologies: infoJob.technologies,
+      }
+      await this.prisma.cV.update({
+        where: { id: cvId },
+        data: { viewed: true },
+      });
+      return {
+        code: "success",
+        message: "CV details retrieved successfully",
+        infoCV: dataFinalCV,
+        infoJob: dataFinalJob
+      }
+    } catch (error) {
+      throw new HttpException(
+        "Server error, please try again later",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 }
