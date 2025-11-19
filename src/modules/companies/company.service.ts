@@ -18,7 +18,7 @@ export class CompanyService {
     });
 
     if (existsCompany) {
-      throw new BadRequestException("Email đã tồn tại!");
+      throw new BadRequestException("Email already exists!");
     }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -31,7 +31,7 @@ export class CompanyService {
       },
     });
 
-    return { message: "Đăng ký thành công!" };
+    return { message: "Registration successful!" };
   }
   async login(data: LoginDto, res: Response) {
     const { email, password } = data;
@@ -40,15 +40,15 @@ export class CompanyService {
     });
 
     if (!existsCompany) {
-      throw new BadRequestException("Email không tồn tại!");
+      throw new BadRequestException("Email does not exist!");
     }
     if (existsCompany.role !== "employer") {
-      throw new ForbiddenException("Bạn không có quyền đăng nhập ở khu vực này!");
+      throw new ForbiddenException("You do not have permission to log in here!");
     }
 
     const isPasswordValid = await bcrypt.compare(password, `${existsCompany.password}`);
     if (!isPasswordValid) {
-      throw new UnauthorizedException("Mật khẩu không đúng!");
+      throw new UnauthorizedException("Incorrect password!");
     }
     const payload = { id: existsCompany.id, email: existsCompany.email, role: existsCompany.role };
     const token = await this.jwtService.signAsync(payload);
@@ -58,7 +58,7 @@ export class CompanyService {
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 * 7,
     });
-    return { message: "Đăng nhập thành công!" };
+    return { message: "Login successful!" };
   }
 
   async updateProfile(body: any, id: any, logoUrl?: string) {
@@ -78,10 +78,10 @@ export class CompanyService {
       });
       return {
         code: "success",
-        message: "Cập nhật thành công!"
+        message: "Profile updated successfully!"
       };
     } catch (error) {
-      throw new BadRequestException("Không thể cập nhật hồ sơ!");
+      throw new BadRequestException("Unable to update profile!");
     }
   }
 
@@ -107,7 +107,7 @@ export class CompanyService {
 
     return {
       code: "success",
-      message: "Tạo công việc thành công!"
+      message: "Job created successfully!"
     };
 
   }
@@ -137,7 +137,7 @@ export class CompanyService {
     if (!accountCompany) {
       return {
         code: "error",
-        message: "Không tìm thấy thông tin công ty!",
+        message: "Company not found!"
       };
     }
     let cityName: string | undefined = undefined;
@@ -166,7 +166,7 @@ export class CompanyService {
     }
     return {
       code: "success",
-      message: "Lấy danh sách công việc thành công!",
+      message: "Job list retrieved successfully!",
       dataFinal,
       totalPage
     }
@@ -175,17 +175,17 @@ export class CompanyService {
     try {
       const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
       if (!jobDetail) {
-        throw new NotFoundException("ID công việc không tồn tại!");
+        throw new NotFoundException("Job ID does not exist!");
       }
 
       return {
         code: "success",
-        message: "Lấy thông tin công việc thành công!",
+        message: "Job details retrieved successfully!",
         jobDetail: jobDetail
       }
     } catch (error) {
       throw new HttpException(
-        "Lỗi server, vui lòng thử lại sau!",
+        "Server error, please try again later!",
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
@@ -195,7 +195,7 @@ export class CompanyService {
     try {
       const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
       if (!jobDetail) {
-        throw new NotFoundException("ID công việc không tồn tại!");
+        throw new NotFoundException("Job ID does not exist!");
       }
       const dataToUpdate: any = { ...body };
       dataToUpdate.salaryMin = body.salaryMin !== undefined ? (body.salaryMin !== "" ? parseInt(body.salaryMin) || 0 : 0) : jobDetail.salaryMin;
@@ -211,11 +211,11 @@ export class CompanyService {
 
       return {
         code: "success",
-        message: "Cập nhật thành công!",
+        message: "Job updated successfully!"
       }
     } catch (error) {
       throw new HttpException(
-        "Lỗi server, vui lòng thử lại sau!",
+        "Server error, please try again later!",
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
@@ -226,23 +226,23 @@ export class CompanyService {
     try {
       const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
       if (!jobDetail) {
-        throw new NotFoundException("ID công việc không tồn tại!");
+        throw new NotFoundException("Job ID does not exist!");
       }
       await this.prisma.job.delete({ where: { id: id } });
       return {
         code: "success",
-        message: "Xóa công việc thành công!"
+        message: "Job deleted successfully!"
       };
     } catch (error) {
       throw new HttpException(
-        "Lỗi server, vui lòng thử lại sau!",
+        "Server error, please try again later!",
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }
 
   async listCompanies(query: any) {
-    const pageSize = Number(query.pageSize) || 2;
+    const pageSize = 6;
     let page = Number(query.page);
     if (!page || page <= 0) page = 1;
     const totalRecord = await this.prisma.accountCompany.count();
@@ -270,9 +270,61 @@ export class CompanyService {
 
     return {
       code: "success",
-      message: "Lấy danh sách công ty thành công!",
+      message: "Company list retrieved successfully!",
       companyListFinal: finalData,
       totalPage
     };
+  }
+
+  async detailCompany(id: string) {
+    try {
+      const record = await this.prisma.accountCompany.findUnique({
+        where: { id },
+        include: {
+          city: true,
+          jobs: {
+            orderBy: { createdAt: "desc" }
+          }
+        }
+      })
+      if (!record) {
+        throw new NotFoundException("Invalid company ID!")
+      }
+      const companyDetail = {
+        id: record.id,
+        logo: record.logo,
+        companyName: record.companyName,
+        address: record.address,
+        companyModel: record.companyModel,
+        companyEmployees: record.companyEmployees,
+        workingTime: record.workingTime,
+        workOvertime: record.workOvertime,
+        description: record.description,
+        cityName: record.city?.name ?? ""
+      }
+      const jobList = record.jobs.map(job => ({
+        id: job.id,
+        companyLogo: record.logo,
+        title: job.title,
+        companyName: record.companyName,
+        salaryMin: job.salaryMin,
+        salaryMax: job.salaryMax,
+        position: job.position,
+        workingForm: job.workingForm,
+        companyCity: record.city?.name ?? "",
+        technologies: job.technologies,
+      }));
+      return {
+        code: "success",
+        message: "Company detail retrieved successfully!",
+        companyDetail,
+        jobList
+      }
+    } catch (error) {
+      throw new HttpException(
+        "Server error, please try again later!",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 }

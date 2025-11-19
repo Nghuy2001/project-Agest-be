@@ -10,7 +10,7 @@ export class JobService {
     try {
       const record = await this.prisma.job.findUnique({ where: { id } });
       if (!record) {
-        throw new NotFoundException('ID không hợp lệ!');
+        throw new NotFoundException('Invalid job ID.');
       }
       const jobDetail = {
         id: record.id,
@@ -47,12 +47,12 @@ export class JobService {
       }
       return {
         code: "success",
-        message: 'Lấy chi tiết công việc thành công!',
+        message: 'Job details retrieved successfully.',
         jobDetail
       }
     } catch (error) {
       console.error(error);
-      throw new InternalServerErrorException('Có lỗi khi lấy chi tiết công việc!');
+      throw new InternalServerErrorException('Failed to retrieve job details.');
     }
   }
   async jobApply(body: JobApplyDto, accountUser: any, url?: string) {
@@ -61,7 +61,7 @@ export class JobService {
         where: { id: body.jobId }
       });
       if (!job) {
-        throw new NotFoundException("Job không tồn tại!");
+        throw new NotFoundException("Job does not exist.");
       }
       const urlNew = url ? url : "";
       const cv = await this.prisma.cV.create({
@@ -86,11 +86,11 @@ export class JobService {
       });
       return {
         code: "success",
-        message: "Ứng tuyển thành công!"
+        message: "Application submitted successfully."
       };
     } catch (error) {
-      console.error("Lỗi khi ứng tuyển:", error);
-      throw new InternalServerErrorException("Không thể gửi CV. Vui lòng thử lại!");
+      console.error("Error during job application", error);
+      throw new InternalServerErrorException("Failed to submit CV. Please try again.");
     }
   }
 }

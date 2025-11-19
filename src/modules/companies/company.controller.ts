@@ -102,4 +102,10 @@ export class CompanyController {
   async listCompanies(@Query() query: { pageSize?: string; page?: string }) {
     return this.companyService.listCompanies(query);
   }
+
+
+  @Get('detail/:id')
+  async detailCompany(@Param('id') id: string) {
+    return this.companyService.detailCompany(id);
+  }
 }

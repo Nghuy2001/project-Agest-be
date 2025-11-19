@@ -4,7 +4,7 @@ export const createSearch = (str: string) => {
   return slugify(str, {
     replacement: " ",
     lower: true,
-    strict: true,       // bỏ ký tự đặc biệt
+    strict: true,
     locale: "vi"
   });
 };

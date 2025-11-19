@@ -2,54 +2,46 @@ import { PartialType } from '@nestjs/mapped-types';
 import { IsEmail, IsNotEmpty, MaxLength, MinLength, Matches, IsOptional, IsString, IsInt, Min, IsArray, IsNumberString } from 'class-validator';
 
 export class RegisterDto {
-  @IsNotEmpty({ message: 'Vui lòng nhập tên công ty!' })
-  @MaxLength(200, { message: 'Tên công ty không được vượt quá 200 ký tự!' })
+  @IsNotEmpty({ message: 'Company name is required.' })
+  @MaxLength(200, { message: 'Company name must not exceed 200 characters.' })
   companyName: string;
 
-  @IsNotEmpty({ message: 'Vui lòng nhập email!' })
-  @IsEmail({}, { message: 'Email không đúng định dạng!' })
+  @IsNotEmpty({ message: 'Email is required.' })
+  @IsEmail({}, { message: 'Email must be a valid email address.' })
   email: string;
 
-  @IsNotEmpty({ message: 'Vui lòng nhập mật khẩu!' })
-  @MinLength(8, { message: 'Mật khẩu phải chứa ít nhất 8 ký tự!' })
-  @Matches(/[A-Z]/, { message: 'Mật khẩu phải chứa ít nhất một chữ cái in hoa!' })
-  @Matches(/[a-z]/, { message: 'Mật khẩu phải chứa ít nhất một chữ cái thường!' })
-  @Matches(/\d/, { message: 'Mật khẩu phải chứa ít nhất một chữ số!' })
-  @Matches(/[@$!%*?&]/, { message: 'Mật khẩu phải chứa ít nhất một ký tự đặc biệt!' })
+  @IsNotEmpty({ message: 'Password is required!' })
+  @MinLength(8, { message: 'Password must be at least 8 characters!' })
+  @Matches(/[A-Z]/, { message: 'Password must contain at least one uppercase letter!' })
+  @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter!' })
+  @Matches(/\d/, { message: 'Password must contain at least one number!' })
+  @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
   password: string;
 }
 
 export class LoginDto {
-  @IsNotEmpty({ message: "Vui lòng nhập email!" })
-  @IsEmail({}, { message: "Email không đúng định dạng!" })
+  @IsNotEmpty({ message: 'Email is required.' })
+  @IsEmail({}, { message: 'Email must be a valid email address.' })
   email: string;
 
-  @IsNotEmpty({ message: "Vui lòng nhập mật khẩu!" })
-  @MinLength(8, { message: "Mật khẩu phải chứa ít nhất 8 ký tự!" })
-  @Matches(/[A-Z]/, {
-    message: "Mật khẩu phải chứa ít nhất một chữ cái in hoa!",
-  })
-  @Matches(/[a-z]/, {
-    message: "Mật khẩu phải chứa ít nhất một chữ cái thường!",
-  })
-  @Matches(/\d/, {
-    message: "Mật khẩu phải chứa ít nhất một chữ số!",
-  })
-  @Matches(/[@$!%*?&]/, {
-    message: "Mật khẩu phải chứa ít nhất một ký tự đặc biệt!",
-  })
+  @IsNotEmpty({ message: 'Password is required!' })
+  @MinLength(8, { message: 'Password must be at least 8 characters!' })
+  @Matches(/[A-Z]/, { message: 'Password must contain at least one uppercase letter!' })
+  @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter!' })
+  @Matches(/\d/, { message: 'Password must contain at least one number!' })
+  @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
   password: string;
 }
 
 
 export class UpdateCompanyDto {
   @IsOptional()
-  @IsString()
-  @MaxLength(200, { message: 'Tên công ty không được vượt quá 200 ký tự!' })
+  @IsString({ message: 'Company name must be a string.' })
+  @MaxLength(200, { message: 'Company name must not exceed 200 characters.' })
   companyName?: string;
 
   @IsOptional()
-  @IsEmail({}, { message: 'Email không đúng định dạng!' })
+  @IsEmail({}, { message: 'Email must be a valid email address.' })
   email?: string;
 
   @IsOptional()
@@ -58,7 +50,7 @@ export class UpdateCompanyDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(255, { message: 'Địa chỉ quá dài!' })
+  @MaxLength(255, { message: 'Address must not exceed 255 characters.' })
   address?: string;
 
   @IsOptional()
@@ -79,7 +71,7 @@ export class UpdateCompanyDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(20, { message: 'Số điện thoại không hợp lệ!' })
+  @MaxLength(20, { message: 'Phone number is invalid!' })
   phone?: string;
 
   @IsOptional()
@@ -90,13 +82,13 @@ export class UpdateCompanyDto {
 
 
 export class CreateJobDto {
-  @IsNotEmpty({ message: "Vui lòng nhập tên công việc!" })
+  @IsNotEmpty({ message: 'Job title is required!' })
   title: string;
 
-  @IsNumberString({}, { message: "Mức lương tối thiểu không hợp lệ!" })
+  @IsNumberString({}, { message: 'Minimum salary must be a number!' })
   salaryMin: string;
 
-  @IsNumberString({}, { message: "Mức lương tối đa không hợp lệ!" })
+  @IsNumberString({}, { message: 'Maximum salary must be a number!' })
   salaryMax: string;
 
   @IsOptional()

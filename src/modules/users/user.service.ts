@@ -16,7 +16,7 @@ export class UserService {
     });
 
     if (existingUser) {
-      throw new BadRequestException("Email đã tồn tại!");
+      throw new BadRequestException("Email already exists!");
     }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(data.password, salt);
@@ -29,7 +29,7 @@ export class UserService {
       },
     });
 
-    return { message: "Đăng ký thành công!" };
+    return { message: "Registration successful!" };
   }
 
   async login(data: LoginDto, res: Response) {
@@ -38,15 +38,15 @@ export class UserService {
     });
 
     if (!existingUser) {
-      throw new BadRequestException("Email không tồn tại!");
+      throw new BadRequestException("Email does not exist!");
     }
     if (existingUser.role !== "candidate") {
-      throw new ForbiddenException("Bạn không có quyền đăng nhập ở khu vực này!");
+      throw new ForbiddenException("You do not have permission to log in here!");
     }
 
     const isPasswordValid = await bcrypt.compare(data.password, `${existingUser.password}`);
     if (!isPasswordValid) {
-      throw new UnauthorizedException("Mật khẩu không đúng!");
+      throw new UnauthorizedException("Incorrect password!");
     }
     const payload = { id: existingUser.id, username: existingUser.email, role: existingUser.role };
     const token = await this.jwtService.signAsync(payload);
@@ -56,7 +56,7 @@ export class UserService {
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 * 7,
     });
-    return { message: "Đăng nhập thành công!" };
+    return { message: "Login successful!" };
   }
   async updateProfile(body: any, account: any, avatarUrl?: string) {
     try {
@@ -74,7 +74,7 @@ export class UserService {
         });
 
         if (existEmail) {
-          throw new BadRequestException("Email này đã được sử dụng!");
+          throw new BadRequestException("This email is already in use!");
         }
       }
 
@@ -85,10 +85,10 @@ export class UserService {
 
       return {
         code: "success",
-        message: "Cập nhật thành công!"
+        message: "Profile updated successfully!"
       };
     } catch (error) {
-      throw new BadRequestException("Không thể cập nhật hồ sơ!");
+      throw new BadRequestException("Failed to update profile!");
     }
   }
 }

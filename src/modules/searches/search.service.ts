@@ -56,7 +56,7 @@ export class SearchService {
     if (currentPage > totalPage && totalPage > 0) {
       return {
         code: "success",
-        message: 'Tìm kiếm việc làm thành công!',
+        message: 'Job search completed successfully.',
         jobs: [],
         totalPage: totalPage,
         totalRecord: totalRecord
@@ -90,7 +90,7 @@ export class SearchService {
 
     return {
       code: "success",
-      message: 'Tìm kiếm việc làm thành công!',
+      message: 'Job search completed successfully.',
       jobs: dataFinal,
       totalPage: totalPage,
       totalRecord: totalRecord

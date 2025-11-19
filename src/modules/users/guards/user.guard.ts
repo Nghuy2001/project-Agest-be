@@ -6,11 +6,11 @@ export class CandidateGuard implements CanActivate {
     const req = context.switchToHttp().getRequest();
 
     if (!req.account) {
-      throw new UnauthorizedException("Bạn chưa đăng nhập!");
+      throw new UnauthorizedException("You are not logged in!");
     }
 
     if (req.account.role !== "candidate") {
-      throw new ForbiddenException("Bạn không có quyền!");
+      throw new ForbiddenException("You do not have permission!");
     }
 
     return true;

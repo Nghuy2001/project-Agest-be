@@ -23,7 +23,7 @@ export class JobController {
     fileFilter: (req, file, callback) => {
       if (!file.originalname.match(/\.(pdf)$/)) {
         return callback(
-          new BadRequestException('Chỉ cho phép upload file PDF!'),
+          new BadRequestException('Only PDF files are allowed.'),
           false,
         );
       }

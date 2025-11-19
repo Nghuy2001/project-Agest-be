@@ -1,68 +1,49 @@
 import { IsEmail, IsNotEmpty, MinLength, MaxLength, Matches, IsOptional } from 'class-validator';
 
 export class RegisterDto {
-  @IsNotEmpty({ message: 'Vui lòng nhập họ tên!' })
-  @MinLength(5, { message: 'Họ tên phải có ít nhất 5 ký tự!' })
-  @MaxLength(50, { message: 'Họ tên không được vượt quá 50 ký tự!' })
+  @IsNotEmpty({ message: 'Full name is required!' })
+  @MinLength(5, { message: 'Full name must be at least 5 characters long!' })
+  @MaxLength(50, { message: 'Full name cannot exceed 50 characters!' })
   fullName: string;
 
-  @IsNotEmpty({ message: 'Vui lòng nhập email của bạn!' })
-  @IsEmail({}, { message: 'Email không đúng định dạng!' })
+  @IsNotEmpty({ message: 'Email is required!' })
+  @IsEmail({}, { message: 'Email is not valid!' })
   email: string;
 
-  @IsNotEmpty({ message: 'Vui lòng nhập mật khẩu!' })
-  @MinLength(8, { message: 'Mật khẩu phải chứa ít nhất 8 ký tự!' })
-  @Matches(/[A-Z]/, {
-    message: 'Mật khẩu phải chứa ít nhất một chữ cái in hoa!',
-  })
-  @Matches(/[a-z]/, {
-    message: 'Mật khẩu phải chứa ít nhất một chữ cái thường!',
-  })
-  @Matches(/\d/, {
-    message: 'Mật khẩu phải chứa ít nhất một chữ số!',
-  })
-  @Matches(/[@$!%*?&]/, {
-    message: 'Mật khẩu phải chứa ít nhất một ký tự đặc biệt!',
-  })
+  @IsNotEmpty({ message: 'Password is required!' })
+  @MinLength(8, { message: 'Password must be at least 8 characters long!' })
+  @Matches(/[A-Z]/, { message: 'Password must contain at least one uppercase letter!' })
+  @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter!' })
+  @Matches(/\d/, { message: 'Password must contain at least one number!' })
+  @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
   password: string;
 }
 export class LoginDto {
-  @IsNotEmpty({ message: 'Vui lòng nhập email của bạn!' })
-  @IsEmail({}, { message: 'Email không đúng định dạng!' })
+  @IsNotEmpty({ message: 'Email is required!' })
+  @IsEmail({}, { message: 'Email is not valid!' })
   email: string;
 
-  @IsNotEmpty({ message: 'Vui lòng nhập mật khẩu!' })
-  @MinLength(8, { message: 'Mật khẩu phải chứa ít nhất 8 ký tự!' })
-  @Matches(/[A-Z]/, {
-    message: 'Mật khẩu phải chứa ít nhất một chữ cái in hoa!',
-  })
-  @Matches(/[a-z]/, {
-    message: 'Mật khẩu phải chứa ít nhất một chữ cái thường!',
-  })
-  @Matches(/\d/, {
-    message: 'Mật khẩu phải chứa ít nhất một chữ số!',
-  })
-  @Matches(/[@$!%*?&]/, {
-    message: 'Mật khẩu phải chứa ít nhất một ký tự đặc biệt!',
-  })
+  @IsNotEmpty({ message: 'Password is required!' })
+  @MinLength(8, { message: 'Password must be at least 8 characters long!' })
+  @Matches(/[A-Z]/, { message: 'Password must contain at least one uppercase letter!' })
+  @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter!' })
+  @Matches(/\d/, { message: 'Password must contain at least one number!' })
+  @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
   password: string;
 }
 
 export class UpdateProfileDto {
-
   @IsOptional()
-  @MinLength(5, { message: 'Họ tên phải có ít nhất 5 ký tự!' })
-  @MaxLength(50, { message: 'Họ tên không được vượt quá 50 ký tự!' })
+  @MinLength(5, { message: 'Full name must be at least 5 characters long!' })
+  @MaxLength(50, { message: 'Full name cannot exceed 50 characters!' })
   fullName?: string;
 
   @IsOptional()
-  @IsEmail({}, { message: 'Email không đúng định dạng!' })
+  @IsEmail({}, { message: 'Email is not valid!' })
   email?: string;
 
   @IsOptional()
-  @Matches(/^\d{10,11}$/, {
-    message: 'Số điện thoại phải chứa 10–11 chữ số!',
-  })
+  @Matches(/^\d{10,11}$/, { message: 'Phone number must be 10–11 digits!' })
   phone?: string;
 
 }
