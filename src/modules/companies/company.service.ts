@@ -328,21 +328,26 @@ export class CompanyService {
     }
   }
 
-  async cvList(id: string) {
+  async cvList(id: string, page?: string) {
+    const pageSize = 2;
+    let pageNumber = Number(page);
+    if (!pageNumber || pageNumber <= 0) pageNumber = 1;
+
     const listJob = await this.prisma.job.findMany({
       where: { companyId: id }
-    })
-    const listJobId = listJob.map(item => item.id)
+    });
+    const listJobId = listJob.map(job => job.id);
+    const totalRecord = await this.prisma.cV.count({
+      where: { jobId: { in: listJobId } }
+    });
+    const totalPage = Math.ceil(totalRecord / pageSize);
+    const skip = (pageNumber - 1) * pageSize;
     const listCV = await this.prisma.cV.findMany({
-      where: {
-        jobId: {
-          in: listJobId
-        }
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    })
+      where: { jobId: { in: listJobId } },
+      take: pageSize,
+      skip,
+      orderBy: { createdAt: "desc" }
+    });
     const dataFinal: any = []
     for (const item of listCV) {
       const dataItemFinal = {
@@ -373,7 +378,8 @@ export class CompanyService {
     return {
       code: "success",
       message: "CV list retrieved successfully",
-      dataFinal
+      dataFinal,
+      totalPage
     }
   }
   async cvDetail(cvId: string, companyId: string) {

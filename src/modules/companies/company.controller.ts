@@ -111,8 +111,8 @@ export class CompanyController {
 
   @Get('cv/list')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async cvList(@Request() req) {
-    return this.companyService.cvList(req.account.id);
+  async cvList(@Request() req, @Query('page') page?: string) {
+    return this.companyService.cvList(req.account.id, page);
   }
   @Get('cv/detail/:id')
   @UseGuards(JwtAuthGuard, EmployerGuard)
