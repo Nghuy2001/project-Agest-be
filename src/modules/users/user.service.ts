@@ -91,4 +91,52 @@ export class UserService {
       throw new BadRequestException("Failed to update profile!");
     }
   }
+
+  async getCVList(accountUser: any, page?: string) {
+    const pageSize = 2;
+    let pageNumber = Number(page);
+    if (!pageNumber || pageNumber <= 0) pageNumber = 1;
+    const email = accountUser.email;
+    const totalRecord = await this.prisma.cV.count({
+      where: { email: email }
+    })
+    const totalPage = Math.ceil(totalRecord / pageSize);
+    const skip = (pageNumber - 1) * pageSize;
+    const listCV = await this.prisma.cV.findMany({
+      where: { email: email },
+      take: pageSize,
+      skip: skip,
+      orderBy: { createdAt: "desc" },
+      include: {
+        job: {
+          include: {
+            company: true
+          }
+        }
+      }
+    })
+    const dataFinal = listCV.map(cv => {
+      const job = cv.job;
+      const company = job?.company;
+      return {
+        id: cv.id,
+        jobTitle: job?.title || "",
+        companyName: company?.companyName || "",
+        jobSalaryMin: job?.salaryMin ? Number(job.salaryMin) : 0,
+        jobSalaryMax: job?.salaryMax ? Number(job.salaryMax) : 0,
+        jobPosition: job?.position || "",
+        jobWorkingForm: job?.workingForm || "",
+        status: cv.status,
+        viewed: cv.viewed
+      }
+    });
+
+
+    return {
+      code: "success",
+      message: "successfully",
+      listCV: dataFinal,
+      totalPage
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Patch, Post, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Patch, Post, Query, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
 import { LoginDto, RegisterDto, UpdateProfileDto } from './dto/user.dto';
 import type { Response } from 'express';
@@ -40,5 +40,12 @@ export class UserController {
       uploadedImage?.secure_url || undefined,
     );
   }
-
+  @Get('cv/list')
+  @UseGuards(JwtAuthGuard, CandidateGuard)
+  async getCVList(
+    @Request() req,
+    @Query("page") page?: string
+  ) {
+    return this.userService.getCVList(req.account, page)
+  }
 }
