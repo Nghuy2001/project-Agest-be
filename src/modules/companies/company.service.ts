@@ -162,6 +162,7 @@ export class CompanyService {
         workingForm: item.workingForm,
         companyCity: cityName,
         technologies: item.technologies,
+        display: item.display
       });
     }
     return {
@@ -240,7 +241,30 @@ export class CompanyService {
       );
     }
   }
+  async changeDisplay(companyAccount: any, id: string) {
+    try {
+      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
+      if (!jobDetail) {
+        throw new NotFoundException("Job ID does not exist!");
+      }
+      await this.prisma.job.update({
+        where: { id: id },
+        data: {
+          display: !jobDetail.display,
+        },
+      });
 
+      return {
+        code: "success",
+        message: "Job changed display successfully!"
+      };
+    } catch (error) {
+      throw new HttpException(
+        "Server error, please try again later!",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
   async listCompanies(query: any) {
     const pageSize = 6;
     let page = Number(query.page);

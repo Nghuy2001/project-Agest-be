@@ -8,7 +8,9 @@ export class SearchService {
   constructor(private readonly prisma: PrismaService) { }
   async search(query: SearchJobDto) {
     const { language, city, company, keyword, position, workingForm, page } = query;
-    const find: any = {};
+    const find: any = {
+      display: true
+    };
     let totalPage = 0;
     let totalRecord = 0;
 

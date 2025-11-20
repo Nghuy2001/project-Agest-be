@@ -98,6 +98,12 @@ export class CompanyController {
     return this.companyService.deleteJob(req.account, id);
   }
 
+  @Patch('job/change-display/:id')
+  @UseGuards(JwtAuthGuard, EmployerGuard)
+  async changeDisplay(@Request() req, @Param('id') id: string) {
+    return this.companyService.changeDisplay(req.account, id);
+  }
+
   @Get('list')
   async listCompanies(@Query() query: { pageSize?: string; page?: string }) {
     return this.companyService.listCompanies(query);
