@@ -1,10 +1,11 @@
-import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { LoginDto, RegisterDto } from './dto/user.dto';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import bcrypt from "bcryptjs";
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { cleanObject } from 'src/core/helpers/cleanObject';
+import { title } from 'process';
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService,
@@ -137,6 +138,75 @@ export class UserService {
       message: "successfully",
       listCV: dataFinal,
       totalPage
+    }
+  }
+
+  async cvDetail(cvId: string, companyId: any) {
+    try {
+      const infoCV = await this.prisma.cV.findUnique({
+        where: { id: cvId }
+      })
+      if (!infoCV) throw new NotFoundException(`CV with id ${cvId} not found`);
+      const infoJob = await this.prisma.job.findFirst({
+        where: {
+          id: infoCV.jobId,
+        }
+      })
+      if (!infoJob) throw new ForbiddenException("You do not have permission to access this resource");
+      const dataFinalCV = {
+        fullName: infoCV.fullName,
+        email: infoCV.email,
+        phone: infoCV.phone,
+        fileCV: infoCV.fileCV
+      }
+      const dataFinalJob = {
+        id: infoJob.id,
+        title: infoJob.title,
+        salaryMin: infoJob.salaryMin,
+        salaryMax: infoJob.salaryMax,
+        position: infoJob.position,
+        workingForm: infoJob.workingForm,
+        technologies: infoJob.technologies
+      }
+      return {
+        code: "success",
+        message: "CV details retrieved successfully",
+        infoCV: dataFinalCV,
+        infoJob: dataFinalJob
+      }
+    } catch (error) {
+      console.error("cvDetail error:", error);
+      throw new HttpException(
+        "Server error, please try again later",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  async deleteCV(userId: string, id: string) {
+    try {
+      const infoCV = await this.prisma.cV.findFirst({
+        where: {
+          id: id,
+          userId: userId
+        }
+      });
+
+      if (!infoCV) {
+        throw new NotFoundException("CV ID does not exist or you do not have permission to delete it!");
+      }
+      await this.prisma.cV.delete({
+        where: { id: id }
+      });
+
+      return {
+        code: "success",
+        message: "CV deleted successfully"
+      };
+
+    } catch (error) {
+      console.error("Error deleting CV:", error);
+      throw new InternalServerErrorException("Failed to delete CV");
     }
   }
 }

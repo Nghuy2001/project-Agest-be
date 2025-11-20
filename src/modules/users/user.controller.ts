@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Patch, Post, Query, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
 import { LoginDto, RegisterDto, UpdateProfileDto } from './dto/user.dto';
 import type { Response } from 'express';
@@ -47,5 +47,16 @@ export class UserController {
     @Query("page") page?: string
   ) {
     return this.userService.getCVList(req.account, page)
+  }
+  @Get('cv/detail/:id')
+  @UseGuards(JwtAuthGuard, CandidateGuard)
+  async cvDetail(@Param('id') id: string, @Request() req) {
+    return this.userService.cvDetail(id, req.account.id)
+  }
+
+  @Delete('cv/delete/:id')
+  @UseGuards(JwtAuthGuard, CandidateGuard)
+  async deleteCV(@Request() req, @Param('id') id: string) {
+    return this.userService.deleteCV(req.account.id, id);
   }
 }

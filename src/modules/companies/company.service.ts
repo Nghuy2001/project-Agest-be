@@ -460,7 +460,7 @@ export class CompanyService {
       );
     }
   }
-  async deleteCV(companyId: any, id: string) {
+  async deleteCV(companyId: string, id: string) {
     try {
       const infoCV = await this.prisma.cV.findFirst({ where: { id: id } });
       if (!infoCV) {
