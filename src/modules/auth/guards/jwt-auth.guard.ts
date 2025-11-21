@@ -10,40 +10,41 @@ export class JwtAuthGuard implements CanActivate {
     private readonly prisma: PrismaService,
   ) { }
 
+  private async clearRefreshToken(account: any) {
+    if (account.role === 'candidate') {
+      await this.prisma.accountsUser.update({
+        where: { id: account.id },
+        data: { refreshToken: null },
+      });
+    } else if (account.role === 'employer') {
+      await this.prisma.accountCompany.update({
+        where: { id: account.id },
+        data: { refreshToken: null },
+      });
+    }
+  }
+
   private async refreshAccessToken(payload: any, refreshToken: string, response: Response) {
-    const user = await this.prisma.accountsUser.findUnique({ where: { id: payload.id } });
-    if (user) {
-      if (user.refreshToken !== refreshToken) {
-        await this.prisma.accountsUser.update({ where: { id: payload.id }, data: { refreshToken: null } });
-        throw new UnauthorizedException('Invalid refresh token! Please login again.');
-      }
-      const newAccessToken = await this.jwtService.signAsync({ id: user.id, email: user.email, role: user.role }, { expiresIn: '15m' });
-      response.cookie('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 15 * 60 * 1000,
-      });
-      return { id: user.id, email: user.email, role: user.role };
+    const account = await this.prisma.accountsUser.findUnique({ where: { id: payload.id } })
+      || await this.prisma.accountCompany.findUnique({ where: { id: payload.id } });
+
+    if (!account) throw new UnauthorizedException('Unauthorized');
+
+    if (account.refreshToken !== refreshToken) {
+      await this.clearRefreshToken(account);
+      throw new UnauthorizedException('Invalid refresh token. Please login again.');
     }
 
-    const company = await this.prisma.accountCompany.findUnique({ where: { id: payload.id } });
-    if (company) {
-      if (company.refreshToken !== refreshToken) {
-        await this.prisma.accountCompany.update({ where: { id: payload.id }, data: { refreshToken: null } });
-        throw new UnauthorizedException('Invalid refresh token! Please login again.');
-      }
-      const newAccessToken = await this.jwtService.signAsync({ id: company.id, email: company.email, role: company.role }, { expiresIn: '15m' });
-      response.cookie('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 15 * 60 * 1000,
-      });
-      return { id: company.id, email: company.email, role: company.role };
-    }
+    const newAccessToken = await this.jwtService.signAsync({ id: account.id, email: account.email, role: account.role }, { expiresIn: '15m' });
 
-    throw new UnauthorizedException('Account not found!');
+    response.cookie('accessToken', newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000,
+    });
+
+    return { id: account.id, email: account.email, role: account.role };
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -55,23 +56,26 @@ export class JwtAuthGuard implements CanActivate {
     if (!accessToken && !refreshToken) {
       throw new UnauthorizedException('No token provided');
     }
+
     if (accessToken) {
       try {
         const payload = this.jwtService.verify(accessToken);
         request.account = payload;
         return true;
-      } catch (err: any) {
+      } catch {
         response.clearCookie('accessToken');
       }
     }
+
     if (!refreshToken) throw new UnauthorizedException('Access token expired. Please login again.');
 
     let payload: any;
     try {
       payload = this.jwtService.verify(refreshToken);
-    } catch (err) {
+    } catch {
       throw new UnauthorizedException('Refresh token invalid or expired. Please login again.');
     }
+
     request.account = await this.refreshAccessToken(payload, refreshToken, response);
     return true;
   }

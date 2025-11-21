@@ -7,7 +7,6 @@ export class EmployerGuard implements CanActivate {
     if (!req.account) {
       throw new UnauthorizedException("You are not logged in.");
     }
-    console.log(req.account)
     if (req.account.role !== "employer") {
       throw new ForbiddenException("You do not have permission to access this resource.");
     }

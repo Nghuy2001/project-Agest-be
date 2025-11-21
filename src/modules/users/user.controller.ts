@@ -1,10 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
-import { UpdateProfileDto } from './dto/user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from 'src/core/cloudinary/cloudinary.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CandidateGuard } from './guards/user.guard';
+import { updateProfileDto } from './dto/user.dto';
 
 @Controller('user')
 export class UserController {
@@ -18,7 +18,7 @@ export class UserController {
   @UseInterceptors(FileInterceptor('avatar'))
   async updateProfile(
     @UploadedFile() avatar: Express.Multer.File,
-    @Body() body: UpdateProfileDto,
+    @Body() body: updateProfileDto,
     @Request() req
   ) {
     const uploadedImage = avatar ? await this.cloudinary.uploadImage(avatar) : null;

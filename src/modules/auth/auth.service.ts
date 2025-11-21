@@ -1,89 +1,74 @@
 import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
-import { Response, Request } from 'express';
-import { LoginDto, RegisterCompanyDto, RegisterUserDto } from './dto/auth.dto';
 import bcrypt from "bcryptjs";
 import { JwtService } from '@nestjs/jwt';
+import { loginDto, registerCompanyDto, registerUserDto } from './dto/auth.dto';
 @Injectable()
 export class AuthService {
   constructor(private readonly prisma: PrismaService,
     private jwtService: JwtService
   ) { }
+  async clearOldTokensInDB(accountId: string) {
+    await this.prisma.accountsUser.updateMany({
+      where: { id: accountId },
+      data: { refreshToken: null },
+    });
 
-  private async createTokensAndSetCookies(payload: any, res: Response) {
+    await this.prisma.accountCompany.updateMany({
+      where: { id: accountId },
+      data: { refreshToken: null },
+    });
+  }
+  async loginCompany(data: loginDto) {
+    const { email, password } = data;
+    const companyExists = await this.prisma.accountCompany.findUnique({
+      where: { email },
+    });
+
+    if (!companyExists) throw new BadRequestException("Email does not exist!");
+    if (companyExists.role !== "employer") throw new ForbiddenException("No permission");
+
+    const isPasswordValid = await bcrypt.compare(password, companyExists.password);
+    if (!isPasswordValid) throw new UnauthorizedException("Incorrect password");
+
+    const payload = { id: companyExists.id, email: companyExists.email, role: companyExists.role };
+
     const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
     const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
 
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: 'lax',
-      maxAge: 15 * 60 * 1000,
-    });
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+    await this.prisma.accountCompany.update({
+      where: { id: companyExists.id },
+      data: { refreshToken },
     });
 
     return { accessToken, refreshToken };
   }
-
-  private async clearOldTokens(req: Request, res: Response) {
-    const oldAccessToken = req.cookies?.accessToken;
-    const oldRefreshToken = req.cookies?.refreshToken;
-
-    if (!oldAccessToken && !oldRefreshToken) return;
-
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
-
-    if (!oldRefreshToken) return;
-
-    try {
-      const payload = this.jwtService.verify(oldRefreshToken);
-
-      await this.prisma.accountsUser.update({
-        where: { id: payload.id },
-        data: { refreshToken: null },
-      }).catch(() => { });
-
-      await this.prisma.accountCompany.update({
-        where: { id: payload.id },
-        data: { refreshToken: null },
-      }).catch(() => { });
-    } catch (e) {
-    }
-  }
-  async loginCompany(data: LoginDto, res: Response, req: Request) {
-    await this.clearOldTokens(req, res);
+  async loginUser(data: loginDto) {
     const { email, password } = data;
-    const existsCompany = await this.prisma.accountCompany.findUnique({
-      where: { email: email },
+
+    const userExists = await this.prisma.accountsUser.findUnique({
+      where: { email },
     });
 
-    if (!existsCompany) {
-      throw new BadRequestException("Email does not exist!");
-    }
-    if (existsCompany.role !== "employer") {
-      throw new ForbiddenException("You do not have permission to log in here!");
-    }
+    if (!userExists) throw new BadRequestException("Email does not exist!");
+    if (userExists.role !== "candidate") throw new ForbiddenException("No permission");
 
-    const isPasswordValid = await bcrypt.compare(password, `${existsCompany.password}`);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException("Incorrect password!");
-    }
-    const payload = { id: existsCompany.id, email: existsCompany.email, role: existsCompany.role };
-    const tokens = await this.createTokensAndSetCookies(payload, res);
-    await this.prisma.accountCompany.update({
-      where: { id: existsCompany.id },
-      data: { refreshToken: tokens.refreshToken },
+    const isPasswordValid = await bcrypt.compare(password, userExists.password);
+    if (!isPasswordValid) throw new UnauthorizedException("Incorrect password");
+
+    const payload = { id: userExists.id, email: userExists.email, role: userExists.role };
+
+    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+    const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
+
+    await this.prisma.accountsUser.update({
+      where: { id: userExists.id },
+      data: { refreshToken },
     });
-    return { message: "Login successful!" };
+
+    return { accessToken, refreshToken };
   }
-  async registerCompany(data: RegisterCompanyDto) {
+  async registerCompany(data: registerCompanyDto) {
     const { companyName, email, password } = data
     const existsCompany = await this.prisma.accountCompany.findUnique({
       where: { email: email },
@@ -100,39 +85,13 @@ export class AuthService {
         email: email,
         password: hashedPassword,
         companyName: companyName,
+        role: 'employer'
       },
     });
 
     return { message: "Registration successful!" };
   }
-
-  async loginUser(data: LoginDto, res: Response, req: Request) {
-    await this.clearOldTokens(req, res);
-    const existingUser = await this.prisma.accountsUser.findUnique({
-      where: { email: data.email },
-    });
-
-    if (!existingUser) {
-      throw new BadRequestException("Email does not exist!");
-    }
-    if (existingUser.role !== "candidate") {
-      throw new ForbiddenException("You do not have permission to log in here!");
-    }
-
-    const isPasswordValid = await bcrypt.compare(data.password, `${existingUser.password}`);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException("Incorrect password!");
-    }
-    const payload = { id: existingUser.id, email: existingUser.email, role: existingUser.role };
-    const tokens = await this.createTokensAndSetCookies(payload, res);
-    await this.prisma.accountsUser.update({
-      where: { id: existingUser.id },
-      data: { refreshToken: tokens.refreshToken },
-    });
-    return { message: "Login successful!" };
-  }
-
-  async registerUser(data: RegisterUserDto) {
+  async registerUser(data: registerUserDto) {
     const existingUser = await this.prisma.accountsUser.findUnique({
       where: { email: data.email },
     });
@@ -148,12 +107,12 @@ export class AuthService {
         email: data.email,
         password: hashedPassword,
         fullName: data.fullName,
+        role: 'candidate'
       },
     });
 
     return { message: "Registration successful!" };
   }
-
   async check(accountPayload: any) {
     if (!accountPayload) {
       throw new UnauthorizedException('Invalid Token!');
@@ -193,26 +152,15 @@ export class AuthService {
 
     throw new UnauthorizedException('Invalid Token!');
   }
-
-  async logout(req: Request, res: Response) {
-    const token = req.cookies['refreshToken'];
-    if (token) {
-      await this.prisma.accountCompany.updateMany({
-        where: { refreshToken: token },
-        data: { refreshToken: null },
-      });
-
-      await this.prisma.accountsUser.updateMany({
-        where: { refreshToken: token },
-        data: { refreshToken: null },
-      });
-    }
-
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
-    return {
-      code: "success",
-      message: 'Signed out!',
-    };
+  async logoutFromDB(refreshToken: string) {
+    if (!refreshToken) return;
+    await this.prisma.accountCompany.updateMany({
+      where: { refreshToken },
+      data: { refreshToken: null },
+    });
+    await this.prisma.accountsUser.updateMany({
+      where: { refreshToken },
+      data: { refreshToken: null },
+    });
   }
 }

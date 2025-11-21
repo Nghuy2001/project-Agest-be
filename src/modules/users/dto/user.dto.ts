@@ -1,7 +1,7 @@
 import { IsEmail, MinLength, MaxLength, Matches, IsOptional } from 'class-validator';
 
 
-export class UpdateProfileDto {
+export class updateProfileDto {
   @IsOptional()
   @MinLength(5, { message: 'Full name must be at least 5 characters long!' })
   @MaxLength(50, { message: 'Full name cannot exceed 50 characters!' })

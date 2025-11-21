@@ -2,7 +2,7 @@ import { PartialType } from '@nestjs/mapped-types';
 import { IsEmail, IsNotEmpty, MaxLength, IsOptional, IsString, IsNumberString, IsIn } from 'class-validator';
 
 
-export class UpdateCompanyDto {
+export class updateCompanyDto {
   @IsOptional()
   @IsString({ message: 'Company name must be a string.' })
   @MaxLength(200, { message: 'Company name must not exceed 200 characters.' })
@@ -49,7 +49,7 @@ export class UpdateCompanyDto {
 }
 
 
-export class CreateJobDto {
+export class createJobDto {
   @IsNotEmpty({ message: 'Job title is required!' })
   title: string;
 
@@ -76,9 +76,9 @@ export class CreateJobDto {
   description?: string;
 }
 
-export class UpdateJobDto extends PartialType(CreateJobDto) { }
+export class updateJobDto extends PartialType(createJobDto) { }
 
-export class ChangeStatusDto {
+export class changeStatusDto {
   @IsString()
   @IsNotEmpty()
   @IsIn(['approved', 'rejected', 'initial'])

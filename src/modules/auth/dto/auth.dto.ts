@@ -1,6 +1,6 @@
 import { IsEmail, IsNotEmpty, Matches, MaxLength, MinLength } from "class-validator";
 
-export class LoginDto {
+export class loginDto {
   @IsNotEmpty({ message: 'Email is required.' })
   @IsEmail({}, { message: 'Email must be a valid email address.' })
   email: string;
@@ -13,7 +13,7 @@ export class LoginDto {
   @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
   password: string;
 }
-export class RegisterCompanyDto {
+export class registerCompanyDto {
   @IsNotEmpty({ message: 'Company name is required.' })
   @MaxLength(200, { message: 'Company name must not exceed 200 characters.' })
   companyName: string;
@@ -31,7 +31,7 @@ export class RegisterCompanyDto {
   password: string;
 }
 
-export class RegisterUserDto {
+export class registerUserDto {
   @IsNotEmpty({ message: 'Full name is required!' })
   @MinLength(5, { message: 'Full name must be at least 5 characters long!' })
   @MaxLength(50, { message: 'Full name cannot exceed 50 characters!' })
