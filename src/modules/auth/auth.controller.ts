@@ -9,8 +9,8 @@ export class AuthController {
 
   @Post('company/login')
   async loginCompany(@Body() LoginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response) {
-    return this.authService.loginCompany(LoginDto, res);
+    @Res({ passthrough: true }) res: Response, @Req() req) {
+    return this.authService.loginCompany(LoginDto, res, req);
   }
   @Post('company/register')
   async registerCompany(@Body() registerCompanyDto: RegisterCompanyDto) {
@@ -19,8 +19,8 @@ export class AuthController {
 
   @Post('user/login')
   async loginUser(@Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response) {
-    return this.authService.loginUser(loginDto, res);
+    @Res({ passthrough: true }) res: Response, @Req() req) {
+    return this.authService.loginUser(loginDto, res, req);
   }
 
   @Post('user/register')

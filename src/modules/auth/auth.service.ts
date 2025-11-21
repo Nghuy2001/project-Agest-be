@@ -30,7 +30,35 @@ export class AuthService {
 
     return { accessToken, refreshToken };
   }
-  async loginCompany(data: LoginDto, res: Response) {
+
+  private async clearOldTokens(req: Request, res: Response) {
+    const oldAccessToken = req.cookies?.accessToken;
+    const oldRefreshToken = req.cookies?.refreshToken;
+
+    if (!oldAccessToken && !oldRefreshToken) return;
+
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+
+    if (!oldRefreshToken) return;
+
+    try {
+      const payload = this.jwtService.verify(oldRefreshToken);
+
+      await this.prisma.accountsUser.update({
+        where: { id: payload.id },
+        data: { refreshToken: null },
+      }).catch(() => { });
+
+      await this.prisma.accountCompany.update({
+        where: { id: payload.id },
+        data: { refreshToken: null },
+      }).catch(() => { });
+    } catch (e) {
+    }
+  }
+  async loginCompany(data: LoginDto, res: Response, req: Request) {
+    await this.clearOldTokens(req, res);
     const { email, password } = data;
     const existsCompany = await this.prisma.accountCompany.findUnique({
       where: { email: email },
@@ -78,7 +106,8 @@ export class AuthService {
     return { message: "Registration successful!" };
   }
 
-  async loginUser(data: LoginDto, res: Response) {
+  async loginUser(data: LoginDto, res: Response, req: Request) {
+    await this.clearOldTokens(req, res);
     const existingUser = await this.prisma.accountsUser.findUnique({
       where: { email: data.email },
     });
