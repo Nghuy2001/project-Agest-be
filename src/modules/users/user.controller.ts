@@ -1,10 +1,8 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UserService } from './user.service';
-import { LoginDto, RegisterDto, UpdateProfileDto } from './dto/user.dto';
-import type { Response } from 'express';
+import { UpdateProfileDto } from './dto/user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from 'src/core/cloudinary/cloudinary.service';
-import { UploadApiResponse } from 'cloudinary';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CandidateGuard } from './guards/user.guard';
 
@@ -14,15 +12,7 @@ export class UserController {
     private cloudinary: CloudinaryService,
   ) { }
 
-  @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.userService.register(registerDto,);
-  }
-  @Post('login')
-  async login(@Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response) {
-    return this.userService.login(loginDto, res);
-  }
+
   @Patch('profile')
   @UseGuards(JwtAuthGuard, CandidateGuard)
   @UseInterceptors(FileInterceptor('avatar'))

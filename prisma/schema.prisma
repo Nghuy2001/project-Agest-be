@@ -13,16 +13,17 @@ enum Role {
 }
 
 model AccountsUser {
-  id        String   @id @default(uuid()) @map("user_id")
-  fullName  String   @map("user_full_name")
-  email     String   @unique @map("user_email")
-  password  String   @map("user_password")
-  avatar    String?  @map("user_avatar")
-  phone     String?  @map("user_phone")
-  role      Role     @default(candidate) @map("user_role")
-  createdAt DateTime @default(now()) @map("user_created_at")
-  updatedAt DateTime @updatedAt @map("user_updated_at")
-  cvs       CV[]
+  id           String   @id @default(uuid()) @map("user_id")
+  fullName     String   @map("user_full_name")
+  email        String   @unique @map("user_email")
+  password     String   @map("user_password")
+  avatar       String?  @map("user_avatar")
+  phone        String?  @map("user_phone")
+  role         Role     @default(candidate) @map("user_role")
+  refreshToken String?  @map("user_refresh_token")
+  createdAt    DateTime @default(now()) @map("user_created_at")
+  updatedAt    DateTime @updatedAt @map("user_updated_at")
+  cvs          CV[]
 
   @@map("accounts_user")
 }
@@ -43,6 +44,7 @@ model AccountCompany {
   search           String?  @map("company_search")
   logo             String?  @map("company_logo")
   role             Role     @default(employer) @map("company_role")
+  refreshToken     String?  @map("company_refresh_token")
   createdAt        DateTime @default(now()) @map("company_created_at")
   updatedAt        DateTime @updatedAt @map("company_updated_at")
   city             City?    @relation(fields: [cityId], references: [id])

@@ -1,7 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CompanyService } from './company.service';
-import { ChangeStatusDto, CreateJobDto, LoginDto, RegisterDto, UpdateCompanyDto, UpdateJobDto } from './dto/company.dto';
-import type { Response } from 'express';
+import { ChangeStatusDto, CreateJobDto, UpdateCompanyDto, UpdateJobDto } from './dto/company.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { UploadApiResponse } from 'cloudinary';
@@ -14,15 +13,7 @@ export class CompanyController {
     private cloudinary: CloudinaryService,
   ) { }
 
-  @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.companyService.register(registerDto);
-  }
-  @Post('login')
-  async login(@Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response) {
-    return this.companyService.login(loginDto, res);
-  }
+
   @Patch('profile')
   @UseGuards(JwtAuthGuard, EmployerGuard)
   @UseInterceptors(FileInterceptor('logo'))
