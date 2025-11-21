@@ -1,65 +1,11 @@
 import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
-import { JwtService } from '@nestjs/jwt';
-import { LoginDto, RegisterDto } from './dto/company.dto';
-import bcrypt from "bcryptjs";
-import { Response } from 'express';
 import { cleanObject } from 'src/core/helpers/cleanObject';
 import { createSearch } from 'src/core/helpers/createSearch';
 @Injectable()
 export class CompanyService {
-  constructor(private readonly prisma: PrismaService,
-    private jwtService: JwtService
+  constructor(private readonly prisma: PrismaService
   ) { }
-  async register(data: RegisterDto) {
-    const { companyName, email, password } = data
-    const existsCompany = await this.prisma.accountCompany.findUnique({
-      where: { email: email },
-    });
-
-    if (existsCompany) {
-      throw new BadRequestException("Email already exists!");
-    }
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    await this.prisma.accountCompany.create({
-      data: {
-        email: email,
-        password: hashedPassword,
-        companyName: companyName,
-      },
-    });
-
-    return { message: "Registration successful!" };
-  }
-  async login(data: LoginDto, res: Response) {
-    const { email, password } = data;
-    const existsCompany = await this.prisma.accountCompany.findUnique({
-      where: { email: email },
-    });
-
-    if (!existsCompany) {
-      throw new BadRequestException("Email does not exist!");
-    }
-    if (existsCompany.role !== "employer") {
-      throw new ForbiddenException("You do not have permission to log in here!");
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, `${existsCompany.password}`);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException("Incorrect password!");
-    }
-    const payload = { id: existsCompany.id, email: existsCompany.email, role: existsCompany.role };
-    const token = await this.jwtService.signAsync(payload);
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production" ? true : false,
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000 * 7,
-    });
-    return { message: "Login successful!" };
-  }
 
   async updateProfile(body: any, id: any, logoUrl?: string) {
     try {

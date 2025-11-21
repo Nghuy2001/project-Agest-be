@@ -1,40 +1,8 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsEmail, IsNotEmpty, MaxLength, MinLength, Matches, IsOptional, IsString, IsInt, Min, IsArray, IsNumberString, IsIn } from 'class-validator';
-
-export class RegisterDto {
-  @IsNotEmpty({ message: 'Company name is required.' })
-  @MaxLength(200, { message: 'Company name must not exceed 200 characters.' })
-  companyName: string;
-
-  @IsNotEmpty({ message: 'Email is required.' })
-  @IsEmail({}, { message: 'Email must be a valid email address.' })
-  email: string;
-
-  @IsNotEmpty({ message: 'Password is required!' })
-  @MinLength(8, { message: 'Password must be at least 8 characters!' })
-  @Matches(/[A-Z]/, { message: 'Password must contain at least one uppercase letter!' })
-  @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter!' })
-  @Matches(/\d/, { message: 'Password must contain at least one number!' })
-  @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
-  password: string;
-}
-
-export class LoginDto {
-  @IsNotEmpty({ message: 'Email is required.' })
-  @IsEmail({}, { message: 'Email must be a valid email address.' })
-  email: string;
-
-  @IsNotEmpty({ message: 'Password is required!' })
-  @MinLength(8, { message: 'Password must be at least 8 characters!' })
-  @Matches(/[A-Z]/, { message: 'Password must contain at least one uppercase letter!' })
-  @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter!' })
-  @Matches(/\d/, { message: 'Password must contain at least one number!' })
-  @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
-  password: string;
-}
+import { IsEmail, IsNotEmpty, MaxLength, IsOptional, IsString, IsNumberString, IsIn } from 'class-validator';
 
 
-export class UpdateCompanyDto {
+export class updateCompanyDto {
   @IsOptional()
   @IsString({ message: 'Company name must be a string.' })
   @MaxLength(200, { message: 'Company name must not exceed 200 characters.' })
@@ -81,7 +49,7 @@ export class UpdateCompanyDto {
 }
 
 
-export class CreateJobDto {
+export class createJobDto {
   @IsNotEmpty({ message: 'Job title is required!' })
   title: string;
 
@@ -108,9 +76,9 @@ export class CreateJobDto {
   description?: string;
 }
 
-export class UpdateJobDto extends PartialType(CreateJobDto) { }
+export class updateJobDto extends PartialType(createJobDto) { }
 
-export class ChangeStatusDto {
+export class changeStatusDto {
   @IsString()
   @IsNotEmpty()
   @IsIn(['approved', 'rejected', 'initial'])
