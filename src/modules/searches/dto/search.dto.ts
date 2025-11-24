@@ -32,4 +32,10 @@ export class SearchJobDto {
   @IsOptional()
   @IsString()
   limit?: string;
+  @IsOptional()
+  @IsString()
+  salaryMin?: string;
+  @IsOptional()
+  @IsString()
+  salaryMax?: string;
 }

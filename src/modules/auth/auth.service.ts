@@ -8,16 +8,83 @@ export class AuthService {
   constructor(private readonly prisma: PrismaService,
     private jwtService: JwtService
   ) { }
-  async clearOldTokensInDB(accountId: string) {
-    await this.prisma.accountsUser.updateMany({
-      where: { id: accountId },
-      data: { refreshToken: null },
-    });
+  private async generateTokens(payload: { id: string; email: string; role: string }) {
+    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+    const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
 
-    await this.prisma.accountCompany.updateMany({
-      where: { id: accountId },
-      data: { refreshToken: null },
-    });
+    return { accessToken, refreshToken };
+  }
+  async handleGoogleLogin(data: any, role: 'candidate' | 'employer') {
+    if (!data || !data.providerId) {
+      throw new Error('Invalid user data');
+    }
+    let account;
+    if (role === 'employer') {
+      account = await this.prisma.accountCompany.findFirst({ where: { providerId: data.providerId } })
+      if (!account) {
+        account = await this.prisma.accountCompany.create({
+          data: {
+            companyName: data.name,
+            email: data.email,
+            logo: data.avatar,
+            provider: data.provider,
+            providerId: data.providerId,
+            role: role,
+          }
+        })
+      }
+      else if (data.email != account.email) {
+        account = await this.prisma.accountCompany.update({
+          where: { id: account.id },
+          data: { email: data.email }
+        })
+      }
+    } else {
+      account = await this.prisma.accountsUser.findFirst({ where: { providerId: data.providerId } });
+      if (!account) {
+        account = await this.prisma.accountsUser.create({
+          data: {
+            fullName: data.name,
+            email: data.email,
+            avatar: data.avatar,
+            provider: data.provider,
+            providerId: data.providerId,
+            role: role,
+          }
+        });
+      }
+      else if (account.email !== data.email) {
+        account = await this.prisma.accountsUser.update({
+          where: { id: account.id },
+          data: { email: data.email }
+        });
+      }
+    }
+    const payload = { id: account.id, email: account.email, role };
+    const { accessToken, refreshToken } = await this.generateTokens(payload);
+
+    if (role === 'employer') {
+      await this.prisma.accountCompany.update({ where: { id: account.id }, data: { refreshToken } });
+    } else {
+      await this.prisma.accountsUser.update({ where: { id: account.id }, data: { refreshToken } });
+    }
+
+    return { accessToken, refreshToken };
+
+  }
+
+  async clearOldTokensInDB(accountId: string, role: 'candidate' | 'employer') {
+    if (role === 'candidate') {
+      await this.prisma.accountsUser.updateMany({
+        where: { id: accountId },
+        data: { refreshToken: null },
+      });
+    } else {
+      await this.prisma.accountCompany.updateMany({
+        where: { id: accountId },
+        data: { refreshToken: null },
+      });
+    }
   }
   async loginCompany(data: loginDto) {
     const { email, password } = data;
@@ -27,14 +94,15 @@ export class AuthService {
 
     if (!companyExists) throw new BadRequestException("Email does not exist!");
     if (companyExists.role !== "employer") throw new ForbiddenException("No permission");
-
+    if (!companyExists.password) {
+      throw new BadRequestException("This account is registered with Google, please sign in with Google!");
+    }
     const isPasswordValid = await bcrypt.compare(password, companyExists.password);
     if (!isPasswordValid) throw new UnauthorizedException("Incorrect password");
 
     const payload = { id: companyExists.id, email: companyExists.email, role: companyExists.role };
 
-    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
-    const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
+    const { accessToken, refreshToken } = await this.generateTokens(payload);
 
     await this.prisma.accountCompany.update({
       where: { id: companyExists.id },
@@ -52,14 +120,15 @@ export class AuthService {
 
     if (!userExists) throw new BadRequestException("Email does not exist!");
     if (userExists.role !== "candidate") throw new ForbiddenException("No permission");
-
+    if (!userExists.password) {
+      throw new BadRequestException("Password does not exist!");
+    }
     const isPasswordValid = await bcrypt.compare(password, userExists.password);
     if (!isPasswordValid) throw new UnauthorizedException("Incorrect password");
 
     const payload = { id: userExists.id, email: userExists.email, role: userExists.role };
 
-    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
-    const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
+    const { accessToken, refreshToken } = await this.generateTokens(payload);
 
     await this.prisma.accountsUser.update({
       where: { id: userExists.id },
@@ -85,7 +154,7 @@ export class AuthService {
         email: email,
         password: hashedPassword,
         companyName: companyName,
-        role: 'employer'
+        role: 'employer',
       },
     });
 
@@ -114,44 +183,26 @@ export class AuthService {
     return { message: "Registration successful!" };
   }
   async check(accountPayload: any) {
-    if (!accountPayload) {
-      throw new UnauthorizedException('Invalid Token!');
+    if (!accountPayload) throw new UnauthorizedException('Invalid Token!');
+    const { id, role } = accountPayload;
+
+    if (role === 'candidate') {
+      const user = await this.prisma.accountsUser.findUnique({
+        where: { id },
+        select: { id: true, fullName: true, email: true, avatar: true, phone: true },
+      });
+      if (!user) throw new UnauthorizedException('User not found');
+      return { infoUser: user };
+    } else {
+      const company = await this.prisma.accountCompany.findUnique({
+        where: { id },
+        select: { id: true, companyName: true, email: true, cityId: true, address: true, companyModel: true, companyEmployees: true, workingTime: true, workOvertime: true, description: true, logo: true, phone: true },
+      });
+      if (!company) throw new UnauthorizedException('Company not found');
+      return { infoCompany: company };
     }
-
-    const id = accountPayload.id;
-    const user = await this.prisma.accountsUser.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        avatar: true,
-        phone: true
-      },
-    });
-
-    if (user) return { infoUser: user };
-    const company = await this.prisma.accountCompany.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        companyName: true,
-        email: true,
-        cityId: true,
-        address: true,
-        companyModel: true,
-        companyEmployees: true,
-        workingTime: true,
-        workOvertime: true,
-        description: true,
-        logo: true,
-        phone: true
-      },
-    });
-    if (company) return { infoCompany: company };
-
-    throw new UnauthorizedException('Invalid Token!');
   }
+
   async logoutFromDB(refreshToken: string) {
     if (!refreshToken) return;
     await this.prisma.accountCompany.updateMany({
