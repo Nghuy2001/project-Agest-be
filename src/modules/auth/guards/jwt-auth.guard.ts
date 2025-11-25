@@ -2,6 +2,7 @@ import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import type { Response } from 'express';
+import { UserRole } from '../types/auth.type';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -11,12 +12,12 @@ export class JwtAuthGuard implements CanActivate {
   ) { }
 
   private async clearRefreshToken(account: any) {
-    if (account.role === 'candidate') {
+    if (account.role === UserRole.candidate) {
       await this.prisma.accountsUser.update({
         where: { id: account.id },
         data: { refreshToken: null },
       });
-    } else if (account.role === 'employer') {
+    } else if (account.role === UserRole.employer) {
       await this.prisma.accountCompany.update({
         where: { id: account.id },
         data: { refreshToken: null },

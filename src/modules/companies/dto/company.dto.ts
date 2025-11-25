@@ -1,5 +1,6 @@
+import { BadRequestException } from '@nestjs/common';
 import { PartialType } from '@nestjs/mapped-types';
-import { IsEmail, IsNotEmpty, MaxLength, IsOptional, IsString, IsNumberString, IsIn } from 'class-validator';
+import { IsEmail, IsNotEmpty, MaxLength, IsOptional, IsString, IsNumberString, IsIn, ValidateIf } from 'class-validator';
 
 
 export class updateCompanyDto {
@@ -58,7 +59,12 @@ export class createJobDto {
 
   @IsNumberString({}, { message: 'Maximum salary must be a number!' })
   salaryMax: string;
-
+  @ValidateIf(o => o.salaryMin && o.salaryMax)
+  validateSalary() {
+    if (parseInt(this.salaryMin) > parseInt(this.salaryMax)) {
+      throw new BadRequestException('Minimum salary cannot exceed maximum salary!');
+    }
+  }
   @IsOptional()
   @IsString()
   position?: string;
