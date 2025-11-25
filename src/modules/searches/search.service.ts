@@ -7,7 +7,7 @@ import { createSearch } from 'src/core/helpers/createSearch';
 export class SearchService {
   constructor(private readonly prisma: PrismaService) { }
   async search(query: SearchJobDto) {
-    const { language, city, company, keyword, position, workingForm, page } = query;
+    const { language, city, company, keyword, position, workingForm, page, salaryMin, salaryMax } = query;
     const find: any = {
       display: true
     };
@@ -47,6 +47,23 @@ export class SearchService {
     }
     if (workingForm) {
       find.workingForm = workingForm;
+    }
+    const min = salaryMin ? Number(salaryMin) : undefined;
+    const max = salaryMax ? Number(salaryMax) : undefined;
+    if (min || max) {
+      if (!find.AND) find.AND = [];
+      const salaryCondition: any = {};
+
+      if (min) {
+        salaryCondition.salaryMax = { gte: min };
+      }
+      if (max) {
+        salaryCondition.salaryMin = {
+          ...(salaryCondition.salaryMin || {}),
+          lte: max
+        };
+      }
+      find.AND.push(salaryCondition);
     }
     const limitItems = 2;
     let currentPage = 1

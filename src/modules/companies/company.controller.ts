@@ -1,12 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CompanyService } from './company.service';
-import { ChangeStatusDto, CreateJobDto, LoginDto, RegisterDto, UpdateCompanyDto, UpdateJobDto } from './dto/company.dto';
-import type { Response } from 'express';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { UploadApiResponse } from 'cloudinary';
 import { CloudinaryService } from 'src/core/cloudinary/cloudinary.service';
 import { EmployerGuard } from './guards/company.guard';
+import { changeStatusDto, createJobDto, updateCompanyDto, updateJobDto } from './dto/company.dto';
 
 @Controller('company')
 export class CompanyController {
@@ -14,21 +13,13 @@ export class CompanyController {
     private cloudinary: CloudinaryService,
   ) { }
 
-  @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.companyService.register(registerDto);
-  }
-  @Post('login')
-  async login(@Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response) {
-    return this.companyService.login(loginDto, res);
-  }
+
   @Patch('profile')
   @UseGuards(JwtAuthGuard, EmployerGuard)
   @UseInterceptors(FileInterceptor('logo'))
   async updateProfile(
     @UploadedFile() logo: Express.Multer.File,
-    @Body() body: UpdateCompanyDto,
+    @Body() body: updateCompanyDto,
     @Request() req
   ) {
     let uploadedImage: UploadApiResponse | null = null;
@@ -43,7 +34,7 @@ export class CompanyController {
   @UseInterceptors(FilesInterceptor('images', 12))
   async createJob(
     @UploadedFiles() images: Express.Multer.File[],
-    @Body() body: CreateJobDto,
+    @Body() body: createJobDto,
     @Request() req) {
 
     let uploadedImages: string[] = [];
@@ -78,7 +69,7 @@ export class CompanyController {
   @UseInterceptors(FilesInterceptor('images', 12))
   async patchJobDetail(
     @UploadedFiles() images: Express.Multer.File[],
-    @Body() body: UpdateJobDto,
+    @Body() body: updateJobDto,
     @Request() req,
     @Param('id') id: string) {
     let uploadedImages: string[] = [];
@@ -128,7 +119,7 @@ export class CompanyController {
 
   @Patch('cv/change-status')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async changeStatusPatch(@Request() req, @Body() body: ChangeStatusDto) {
+  async changeStatusPatch(@Request() req, @Body() body: changeStatusDto) {
     return this.companyService.changeStatusPatch(body, req.account.id);
   }
   @Delete('cv/delete/:id')

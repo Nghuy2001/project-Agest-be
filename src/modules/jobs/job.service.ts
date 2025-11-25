@@ -64,10 +64,10 @@ export class JobService {
         throw new NotFoundException("Job does not exist.");
       }
       const urlNew = url ? url : "";
-      const cv = await this.prisma.cV.create({
+      await this.prisma.cV.create({
         data: {
           fullName: body.fullName,
-          email: accountUser.username,
+          email: accountUser.email,
           phone: body.phone,
           fileCV: urlNew,
           job: {

@@ -1,10 +1,22 @@
 import slugify from "slugify";
 
+// export const createSearch = (str: string) => {
+//   return slugify(str, {
+//     replacement: " ",
+//     lower: true,
+//     strict: true,
+//     locale: "vi"
+//   });
+// };
+
 export const createSearch = (str: string) => {
-  return slugify(str, {
+  const slug = slugify(str, {
     replacement: " ",
     lower: true,
     strict: true,
-    locale: "vi"
+    locale: "vi",
   });
+  const pattern = slug.replace(/\s+/g, ".*");
+
+  return pattern;
 };
