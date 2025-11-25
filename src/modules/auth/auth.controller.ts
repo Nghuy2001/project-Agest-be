@@ -3,12 +3,13 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import type { Response, Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
-import { loginDto, registerCompanyDto, registerUserDto } from './dto/auth.dto';
+import { googleAuthQueryDto, loginDto, registerCompanyDto, registerUserDto } from './dto/auth.dto';
 import { AuthGuard } from '@nestjs/passport';
-
+import { UserRole } from './types/auth.type';
 @Controller('auth')
 export class AuthController {
   private readonly isProd = process.env.NODE_ENV === 'production';
+  private readonly feUrl = process.env.FE_URL!;
   constructor(private readonly authService: AuthService,
     private jwtService: JwtService
   ) { }
@@ -27,7 +28,7 @@ export class AuthController {
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
   }
-  private generateState(role: 'candidate' | 'employer', redirectTo: string) {
+  private generateState(role: UserRole, redirectTo: string) {
     return this.jwtService.sign({ role, redirectTo }, {
       secret: process.env.JWT_SECRET!,
       expiresIn: '5m',
@@ -56,19 +57,38 @@ export class AuthController {
       }
     }
   }
+  private getSafeRedirectUrl(redirectTo?: string): string {
+    const base = this.feUrl;
 
-  @Get('google')
-  async googleAuth(@Query('role') role: 'candidate' | 'employer', @Res() res) {
-    if (!['candidate', 'employer'].includes(role)) {
-      return res.status(400).send('Invalid role');
+    if (!redirectTo) return base;
+
+    try {
+      const redirectUrl = new URL(redirectTo, base);
+      const baseUrl = new URL(base);
+
+      const isSameOrigin =
+        redirectUrl.origin === baseUrl.origin &&
+        redirectUrl.href.startsWith(baseUrl.href);
+
+      return isSameOrigin ? redirectUrl.href : base;
+    } catch {
+      return base;
     }
-    const state = this.generateState(role, process.env.FE_URL!);
-    const url =
-      `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${process.env.GOOGLE_CLIENT_ID}` +
-      `&redirect_uri=${process.env.GOOGLE_CALLBACK_URL}` +
-      `&response_type=code&scope=openid%20email%20profile` +
-      `&state=${state}`;
+  }
+  @Get('google')
+  async googleAuth(@Query() query: googleAuthQueryDto, @Res() res: Response) {
+    const { role } = query;
+    const redirectTo = this.getSafeRedirectUrl(process.env.FE_URL!);
+    const state = this.generateState(role, redirectTo);
+    const params = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID!,
+      redirect_uri: process.env.GOOGLE_CALLBACK_URL!,
+      response_type: 'code',
+      scope: 'openid email profile',
+      state,
+    });
+
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
 
     return res.redirect(url);
@@ -76,14 +96,16 @@ export class AuthController {
 
   @Get('google/redirect')
   @UseGuards(AuthGuard('google'))
-  async googleRedirect(@Req() req, @Res() res) {
+  async googleRedirect(@Req() req: Request, @Res() res: Response) {
     const { state } = req.query;
 
     await this.handleOldTokens(req, res);
     if (!state) return res.status(400).send('Missing state');
 
-
-    let decoded;
+    if (typeof state !== 'string') {
+      return res.status(400).send('Missing state');
+    }
+    let decoded: { role: UserRole; redirectTo: string };
     try {
       decoded = this.verifyState(state);
     } catch (e) {
@@ -92,7 +114,7 @@ export class AuthController {
 
 
     const role = decoded.role;
-    const redirectTo = decoded.redirectTo;
+    const redirectTo = this.getSafeRedirectUrl(decoded.redirectTo);
     const userGoogle = req.user;
     const tokens = await this.authService.handleGoogleLogin(userGoogle, role);
     this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken)

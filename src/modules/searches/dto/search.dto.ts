@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from "class-validator";
+import { IsOptional, IsString, Matches } from "class-validator";
 
 export class SearchJobDto {
   @IsOptional()
@@ -33,9 +33,14 @@ export class SearchJobDto {
   @IsString()
   limit?: string;
   @IsOptional()
-  @IsString()
+  @Matches(/^\d{1,9}$/, {
+    message: 'salaryMin phải là số nguyên không vượt quá 2_147_483_647',
+  })
   salaryMin?: string;
+
   @IsOptional()
-  @IsString()
+  @Matches(/^\d{1,9}$/, {
+    message: 'salaryMax phải là số nguyên không vượt quá 2_147_483_647',
+  })
   salaryMax?: string;
 }

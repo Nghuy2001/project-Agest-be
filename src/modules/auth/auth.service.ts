@@ -3,6 +3,7 @@ import { PrismaService } from 'src/core/prisma/prisma.service';
 import bcrypt from "bcryptjs";
 import { JwtService } from '@nestjs/jwt';
 import { loginDto, registerCompanyDto, registerUserDto } from './dto/auth.dto';
+import { UserRole } from './types/auth.type';
 @Injectable()
 export class AuthService {
   constructor(private readonly prisma: PrismaService,
@@ -14,12 +15,12 @@ export class AuthService {
 
     return { accessToken, refreshToken };
   }
-  async handleGoogleLogin(data: any, role: 'candidate' | 'employer') {
+  async handleGoogleLogin(data: any, role: UserRole) {
     if (!data || !data.providerId) {
       throw new Error('Invalid user data');
     }
     let account;
-    if (role === 'employer') {
+    if (role === UserRole.employer) {
       account = await this.prisma.accountCompany.findFirst({ where: { providerId: data.providerId } })
       if (!account) {
         account = await this.prisma.accountCompany.create({
@@ -63,7 +64,7 @@ export class AuthService {
     const payload = { id: account.id, email: account.email, role };
     const { accessToken, refreshToken } = await this.generateTokens(payload);
 
-    if (role === 'employer') {
+    if (role === UserRole.employer) {
       await this.prisma.accountCompany.update({ where: { id: account.id }, data: { refreshToken } });
     } else {
       await this.prisma.accountsUser.update({ where: { id: account.id }, data: { refreshToken } });
@@ -73,8 +74,8 @@ export class AuthService {
 
   }
 
-  async clearOldTokensInDB(accountId: string, role: 'candidate' | 'employer') {
-    if (role === 'candidate') {
+  async clearOldTokensInDB(accountId: string, role: UserRole) {
+    if (role === UserRole.candidate) {
       await this.prisma.accountsUser.updateMany({
         where: { id: accountId },
         data: { refreshToken: null },
@@ -93,7 +94,7 @@ export class AuthService {
     });
 
     if (!companyExists) throw new BadRequestException("Email does not exist!");
-    if (companyExists.role !== "employer") throw new ForbiddenException("No permission");
+    if (companyExists.role !== UserRole.employer) throw new ForbiddenException("No permission");
     if (!companyExists.password) {
       throw new BadRequestException("This account is registered with Google, please sign in with Google!");
     }
@@ -119,7 +120,7 @@ export class AuthService {
     });
 
     if (!userExists) throw new BadRequestException("Email does not exist!");
-    if (userExists.role !== "candidate") throw new ForbiddenException("No permission");
+    if (userExists.role !== UserRole.candidate) throw new ForbiddenException("No permission");
     if (!userExists.password) {
       throw new BadRequestException("Password does not exist!");
     }
@@ -154,7 +155,7 @@ export class AuthService {
         email: email,
         password: hashedPassword,
         companyName: companyName,
-        role: 'employer',
+        role: UserRole.employer
       },
     });
 
@@ -176,7 +177,7 @@ export class AuthService {
         email: data.email,
         password: hashedPassword,
         fullName: data.fullName,
-        role: 'candidate'
+        role: UserRole.candidate
       },
     });
 
@@ -186,7 +187,7 @@ export class AuthService {
     if (!accountPayload) throw new UnauthorizedException('Invalid Token!');
     const { id, role } = accountPayload;
 
-    if (role === 'candidate') {
+    if (role === UserRole.candidate) {
       const user = await this.prisma.accountsUser.findUnique({
         where: { id },
         select: { id: true, fullName: true, email: true, avatar: true, phone: true },
