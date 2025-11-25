@@ -1,4 +1,5 @@
-import { IsEmail, IsNotEmpty, Matches, MaxLength, MinLength } from "class-validator";
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { UserRole } from "../types/auth.type";
 
 export class loginDto {
   @IsNotEmpty({ message: 'Email is required.' })
@@ -48,4 +49,13 @@ export class registerUserDto {
   @Matches(/\d/, { message: 'Password must contain at least one number!' })
   @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
   password: string;
+}
+
+export class googleAuthQueryDto {
+  @IsEnum(['candidate', 'employer'])
+  role: UserRole;
+
+  @IsOptional()
+  @IsString()
+  redirectTo?: string;
 }

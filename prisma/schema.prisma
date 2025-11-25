@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -16,10 +16,12 @@ model AccountsUser {
   id           String   @id @default(uuid()) @map("user_id")
   fullName     String   @map("user_full_name")
   email        String   @unique @map("user_email")
-  password     String   @map("user_password")
+  password     String?  @map("user_password")
   avatar       String?  @map("user_avatar")
   phone        String?  @map("user_phone")
   role         Role     @default(candidate) @map("user_role")
+  provider     String?  @map("user_provider")
+  providerId   String?  @map("user_provider_id")
   refreshToken String?  @map("user_refresh_token")
   createdAt    DateTime @default(now()) @map("user_created_at")
   updatedAt    DateTime @updatedAt @map("user_updated_at")
@@ -32,7 +34,7 @@ model AccountCompany {
   id               String   @id @default(uuid()) @map("company_id")
   companyName      String   @map("company_name")
   email            String   @unique @map("company_email")
-  password         String   @map("company_password")
+  password         String?  @map("company_password")
   cityId           String?  @map("company_city")
   address          String?  @map("company_address")
   companyModel     String?  @map("company_model")
@@ -44,6 +46,8 @@ model AccountCompany {
   search           String?  @map("company_search")
   logo             String?  @map("company_logo")
   role             Role     @default(employer) @map("company_role")
+  provider         String?  @map("company_provider")
+  providerId       String?  @map("company_provider_id")
   refreshToken     String?  @map("company_refresh_token")
   createdAt        DateTime @default(now()) @map("company_created_at")
   updatedAt        DateTime @updatedAt @map("company_updated_at")
