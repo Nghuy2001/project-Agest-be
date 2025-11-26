@@ -316,35 +316,25 @@ export class CompanyService {
       where: { jobId: { in: listJobId } },
       take: pageSize,
       skip,
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      include: {
+        job: true
+      }
     });
-    const dataFinal: any = []
-    for (const item of listCV) {
-      const dataItemFinal = {
-        id: item.id,
-        jobTitle: "",
-        fullName: item.fullName,
-        email: item.email,
-        phone: item.phone,
-        jobSalaryMin: 0,
-        jobSalaryMax: 0,
-        jobPosition: "",
-        jobWorkingForm: "",
-        viewed: item.viewed,
-        status: item.status,
-      }
-      const infoJob = await this.prisma.job.findFirst({
-        where: { id: item.jobId }
-      })
-      if (infoJob) {
-        dataItemFinal.jobTitle = `${infoJob.title}`;
-        dataItemFinal.jobSalaryMin = parseInt(`${infoJob.salaryMin}`);
-        dataItemFinal.jobSalaryMax = parseInt(`${infoJob.salaryMax}`);
-        dataItemFinal.jobPosition = `${infoJob.position}`;
-        dataItemFinal.jobWorkingForm = `${infoJob.workingForm}`;
-      }
-      dataFinal.push(dataItemFinal);
-    }
+    const dataFinal = listCV.map(item => ({
+      id: item.id,
+      fullName: item.fullName,
+      email: item.email,
+      phone: item.phone,
+      viewed: item.viewed,
+      status: item.status,
+      jobTitle: item.job?.title || "",
+      jobSalaryMin: item.job?.salaryMin,
+      jobSalaryMax: item.job?.salaryMax,
+      jobPosition: item.job?.position,
+      jobWorkingForm: item.job?.workingForm,
+    }));
+
     return {
       code: "success",
       message: "CV list retrieved successfully",

@@ -5,13 +5,13 @@ import { PrismaModule } from 'src/core/prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { GoogleStrategy } from './strategies/google.strategy';
-
+import { ENV } from 'src/core/constants/auth.constants';
 
 @Module({
   imports: [PrismaModule, PassportModule,
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET,
+      secret: ENV.JWT_SECRET,
     })
   ],
   controllers: [AuthController],

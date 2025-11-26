@@ -12,8 +12,6 @@ export class CompanyController {
   constructor(private readonly companyService: CompanyService,
     private cloudinary: CloudinaryService,
   ) { }
-
-
   @Patch('profile')
   @UseGuards(JwtAuthGuard, EmployerGuard)
   @UseInterceptors(FileInterceptor('logo'))

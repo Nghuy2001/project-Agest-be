@@ -8,43 +8,37 @@ export class JobService {
 
   async getJobDetail(id: string) {
     try {
-      const record = await this.prisma.job.findUnique({ where: { id } });
-      if (!record) {
-        throw new NotFoundException('Invalid job ID.');
-      }
+      const record = await this.prisma.job.findUnique({
+        where: { id },
+        include: {
+          company: {
+            include: { city: true }
+          }
+        }
+      });
+
+      if (!record) throw new NotFoundException("Invalid job ID.");
+
       const jobDetail = {
         id: record.id,
         title: record.title,
-        companyName: "",
         salaryMin: record.salaryMin,
         salaryMax: record.salaryMax,
         images: record.images,
         position: record.position,
         workingForm: record.workingForm,
-        jobAddress: "",
         technologies: record.technologies,
         description: record.description,
-        companyLogo: "",
-        companyId: record.companyId,
-        companyModel: "",
-        companyEmployees: "",
-        companyWorkingTime: "",
-        companyWorkOvertime: ""
-      }
 
-      const companyInfo = await this.prisma.accountCompany.findUnique({
-        where: { id: record.companyId }
-      })
-      if (companyInfo) {
-        jobDetail.companyName = `${companyInfo.companyName}`;
-        jobDetail.companyLogo = `${companyInfo.logo}`;
-        jobDetail.companyModel = `${companyInfo.companyModel}`;
-        jobDetail.companyEmployees = `${companyInfo.companyEmployees}`;
-        jobDetail.companyWorkingTime = `${companyInfo.workingTime}`;
-        jobDetail.companyWorkOvertime = `${companyInfo.workOvertime}`;
-        const cityDetail = await this.prisma.city.findFirst({ where: { id: `${companyInfo.cityId}` } })
-        jobDetail.jobAddress = cityDetail?.name || `${companyInfo.address}`;
-      }
+        companyId: record.companyId,
+        companyName: record.company?.companyName ?? "",
+        companyLogo: record.company?.logo ?? "",
+        companyModel: record.company?.companyModel ?? "",
+        companyEmployees: record.company?.companyEmployees ?? "",
+        companyWorkingTime: record.company?.workingTime ?? "",
+        companyWorkOvertime: record.company?.workOvertime ?? "",
+        jobAddress: record.company?.city?.name ?? record.company?.address ?? ""
+      };
       return {
         code: "success",
         message: 'Job details retrieved successfully.',
@@ -78,11 +72,6 @@ export class JobService {
             connect: { id: accountUser.id }
           }
         },
-        include: {
-          user: true,
-          job: true
-        }
-
       });
       return {
         code: "success",

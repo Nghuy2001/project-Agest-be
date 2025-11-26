@@ -9,89 +9,93 @@ export class SearchService {
   async search(query: SearchJobDto) {
     const { language, city, company, keyword, position, workingForm, page, salaryMin, salaryMax } = query;
     const find: any = {
-      display: true
+      display: true,
+      AND: []
     };
-    let totalPage = 0;
-    let totalRecord = 0;
+    if (keyword) {
+      find.AND.push({ search: { contains: createSearch(keyword) } });
+    }
 
-    if (keyword || language) {
-      find.AND = [];
-
-      if (keyword) {
-        find.AND.push({ search: { contains: createSearch(keyword) } });
-      }
-      if (language) {
-        find.AND.push({ search: { contains: createSearch(language) } });
-      }
+    if (language) {
+      find.AND.push({ search: { contains: createSearch(language) } });
     }
     if (city) {
-      const cityName = await this.prisma.city.findFirst({
+      const cityInfo = await this.prisma.city.findFirst({
         where: { name: city }
-      })
-      if (cityName) {
-        const companies = await this.prisma.accountCompany.findMany({
-          where: { cityId: cityName.id },
-          select: { id: true }
-        })
-        const companyIds = companies.map(item => item.id);
-        find.companyId = { in: companyIds };
+      });
+
+      if (cityInfo) {
+        const companyIds = await this.prisma.accountCompany
+          .findMany({
+            where: { cityId: cityInfo.id },
+            select: { id: true }
+          })
+          .then((rows) => rows.map((c) => c.id));
+
+        if (companyIds.length > 0) {
+          find.AND.push({ companyId: { in: companyIds } });
+        } else {
+          find.AND.push({ companyId: "__NO_COMPANY__" });
+        }
       }
     }
     if (company) {
-      const accountCompany = await this.prisma.accountCompany.findFirst({ where: { companyName: company } });
-      find.companyId = accountCompany ? accountCompany.id : "";
+      const companyInfo = await this.prisma.accountCompany.findFirst({
+        where: { companyName: company }
+      });
+
+      if (companyInfo) {
+        find.AND.push({ companyId: companyInfo.id });
+      } else {
+        find.AND.push({ companyId: "__NO_COMPANY__" });
+      }
     }
 
-    if (position) {
-      find.position = position;
-    }
-    if (workingForm) {
-      find.workingForm = workingForm;
-    }
-    const min = salaryMin ? Number(salaryMin) : undefined;
-    const max = salaryMax ? Number(salaryMax) : undefined;
+    if (position) find.AND.push({ position });
+    if (workingForm) find.AND.push({ workingForm });
+    const min = salaryMin ? Number(salaryMin) : null;
+    const max = salaryMax ? Number(salaryMax) : null;
+
     if (min || max) {
-      if (!find.AND) find.AND = [];
-      const salaryCondition: any = {};
+      const salaryFilter: any = {};
 
       if (min) {
-        salaryCondition.salaryMax = { gte: min };
+        salaryFilter.salaryMax = { gte: min };
       }
+
       if (max) {
-        salaryCondition.salaryMin = {
-          ...(salaryCondition.salaryMin || {}),
-          lte: max
-        };
+        salaryFilter.salaryMin = { lte: max };
       }
-      find.AND.push(salaryCondition);
+
+      find.AND.push(salaryFilter);
     }
-    const limitItems = 2;
-    let currentPage = 1
-    if (page && parseInt(`${page}`) > 0) {
-      currentPage = parseInt(`${page}`);
-    }
-    totalRecord = await this.prisma.job.count({ where: find });
-    totalPage = Math.ceil(totalRecord / limitItems);
+    const limit = 2;
+    const currentPage = page && Number(page) > 0 ? Number(page) : 1;
+    const skip = (currentPage - 1) * limit;
+
+    const totalRecord = await this.prisma.job.count({ where: find });
+    const totalPage = Math.ceil(totalRecord / limit);
+
     if (currentPage > totalPage && totalPage > 0) {
       return {
         code: "success",
-        message: 'Job search completed successfully.',
+        message: "Job search completed successfully.",
         jobs: [],
-        totalPage: totalPage,
-        totalRecord: totalRecord
+        totalPage,
+        totalRecord
       };
     }
-    const skipItems = (currentPage - 1) * limitItems;
     const jobs = await this.prisma.job.findMany({
       where: find,
-      take: limitItems,
-      skip: skipItems,
+      take: limit,
+      skip,
       include: {
         company: {
           include: { city: true }
         }
       }
     });
+
     const dataFinal = jobs.map((item) => ({
       id: item.id,
       title: item.title,
@@ -101,12 +105,10 @@ export class SearchService {
       workingForm: item.workingForm,
       technologies: item.technologies,
 
-      companyLogo: item.company?.logo || "",
-      companyName: item.company?.companyName || "",
-      companyCity: item.company?.city?.name || "",
+      companyLogo: item.company?.logo ?? "",
+      companyName: item.company?.companyName ?? "",
+      companyCity: item.company?.city?.name ?? ""
     }));
-
-
     return {
       code: "success",
       message: 'Job search completed successfully.',

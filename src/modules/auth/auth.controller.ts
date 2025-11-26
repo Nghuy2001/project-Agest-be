@@ -6,38 +6,39 @@ import { JwtService } from '@nestjs/jwt';
 import { googleAuthQueryDto, loginDto, registerCompanyDto, registerUserDto } from './dto/auth.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UserRole } from './types/auth.type';
+import { AUTH_COOKIE, ENV, TOKEN_EXPIRATION } from 'src/core/constants/auth.constants';
 @Controller('auth')
 export class AuthController {
   private readonly isProd = process.env.NODE_ENV === 'production';
-  private readonly feUrl = process.env.FE_URL!;
   constructor(private readonly authService: AuthService,
     private jwtService: JwtService
   ) { }
+
   private setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
-    res.cookie('accessToken', accessToken, {
+    res.cookie(AUTH_COOKIE.ACCESS_TOKEN, accessToken, {
       httpOnly: true,
       secure: this.isProd,
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: TOKEN_EXPIRATION.ACCESS,
     });
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie(AUTH_COOKIE.REFRESH_TOKEN, refreshToken, {
       httpOnly: true,
       secure: this.isProd,
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+      maxAge: TOKEN_EXPIRATION.REFRESH,
     });
   }
   private generateState(role: UserRole, redirectTo: string) {
     return this.jwtService.sign({ role, redirectTo }, {
-      secret: process.env.JWT_SECRET!,
+      secret: ENV.JWT_SECRET,
       expiresIn: '5m',
     });
   }
 
   private verifyState(token: string) {
     return this.jwtService.verify(token, {
-      secret: process.env.JWT_SECRET!,
+      secret: ENV.JWT_SECRET,
     });
   }
 
@@ -58,7 +59,7 @@ export class AuthController {
     }
   }
   private getSafeRedirectUrl(redirectTo?: string): string {
-    const base = this.feUrl;
+    const base = ENV.FE_URL;
 
     if (!redirectTo) return base;
 
@@ -78,11 +79,11 @@ export class AuthController {
   @Get('google')
   async googleAuth(@Query() query: googleAuthQueryDto, @Res() res: Response) {
     const { role } = query;
-    const redirectTo = this.getSafeRedirectUrl(process.env.FE_URL!);
+    const redirectTo = this.getSafeRedirectUrl(ENV.FE_URL);
     const state = this.generateState(role, redirectTo);
     const params = new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      redirect_uri: process.env.GOOGLE_CALLBACK_URL!,
+      client_id: ENV.GOOGLE_CLIENT_ID,
+      redirect_uri: ENV.GOOGLE_CALLBACK_URL,
       response_type: 'code',
       scope: 'openid email profile',
       state,
