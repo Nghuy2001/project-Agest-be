@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { JwtService } from '@nestjs/jwt';
 import { loginDto, registerCompanyDto, registerUserDto } from './dto/auth.dto';
 import { UserRole } from './types/auth.type';
+import { Account } from 'src/core/interfaces/account.interface';
+import { GoogleUser } from '../../core/interfaces/google-user.interface'
 @Injectable()
 export class AuthService {
   constructor(private readonly prisma: PrismaService,
@@ -15,73 +17,97 @@ export class AuthService {
 
     return { accessToken, refreshToken };
   }
-  async handleGoogleLogin(data: any, role: UserRole) {
-    if (!data || !data.providerId) {
-      throw new Error('Invalid user data');
+  async handleGoogleLogin(data: GoogleUser, role: UserRole) {
+    if (!data?.providerId) {
+      throw new BadRequestException('Invalid user data');
     }
-    let account;
-    if (role === UserRole.employer) {
-      account = await this.prisma.accountCompany.findFirst({ where: { providerId: data.providerId } })
-      if (!account) {
-        account = await this.prisma.accountCompany.create({
-          data: {
-            companyName: data.name,
-            email: data.email,
-            logo: data.avatar,
-            provider: data.provider,
-            providerId: data.providerId,
-            role: role,
-          }
-        })
+
+    return this.prisma.$transaction(async (tx) => {
+
+      let account;
+      if (role === UserRole.employer) {
+        const existingAccount = await tx.accountCompany.findUnique({
+          where: { email: data.email },
+        });
+
+        if (existingAccount) {
+          account = await tx.accountCompany.update({
+            where: { id: existingAccount.id },
+            data: {
+              email: data.email,
+              logo: data.avatar,
+              provider: data.provider,
+              providerId: data.providerId,
+            },
+          });
+        } else {
+          account = await tx.accountCompany.create({
+            data: {
+              companyName: data.name,
+              email: data.email,
+              logo: data.avatar,
+              provider: data.provider,
+              providerId: data.providerId,
+              role,
+            },
+          });
+        }
+      } else {
+        const existingAccount = await tx.accountsUser.findUnique({
+          where: { email: data.email },
+        });
+
+        if (existingAccount) {
+          account = await tx.accountsUser.update({
+            where: { id: existingAccount.id },
+            data: {
+              email: data.email,
+              avatar: data.avatar,
+              provider: data.provider,
+              providerId: data.providerId,
+            },
+          });
+        } else {
+          account = await tx.accountsUser.create({
+            data: {
+              fullName: data.name,
+              email: data.email,
+              avatar: data.avatar,
+              provider: data.provider,
+              providerId: data.providerId,
+              role,
+            },
+          });
+        }
       }
-      else if (data.email != account.email) {
-        account = await this.prisma.accountCompany.update({
+
+      const payload = { id: account.id, email: account.email, role };
+      const { accessToken, refreshToken } = await this.generateTokens(payload);
+      if (role === UserRole.employer) {
+        await tx.accountCompany.update({
           where: { id: account.id },
-          data: { email: data.email }
-        })
-      }
-    } else {
-      account = await this.prisma.accountsUser.findFirst({ where: { providerId: data.providerId } });
-      if (!account) {
-        account = await this.prisma.accountsUser.create({
-          data: {
-            fullName: data.name,
-            email: data.email,
-            avatar: data.avatar,
-            provider: data.provider,
-            providerId: data.providerId,
-            role: role,
-          }
+          data: { refreshToken },
+        });
+      } else {
+        await tx.accountsUser.update({
+          where: { id: account.id },
+          data: { refreshToken },
         });
       }
-      else if (account.email !== data.email) {
-        account = await this.prisma.accountsUser.update({
-          where: { id: account.id },
-          data: { email: data.email }
-        });
-      }
-    }
-    const payload = { id: account.id, email: account.email, role };
-    const { accessToken, refreshToken } = await this.generateTokens(payload);
 
-    if (role === UserRole.employer) {
-      await this.prisma.accountCompany.update({ where: { id: account.id }, data: { refreshToken } });
-    } else {
-      await this.prisma.accountsUser.update({ where: { id: account.id }, data: { refreshToken } });
-    }
-
-    return { accessToken, refreshToken };
-
+      return { accessToken, refreshToken };
+    });
   }
+
 
   async clearOldTokensInDB(accountId: string, role: UserRole) {
     if (role === UserRole.candidate) {
-      await this.prisma.accountsUser.updateMany({
+      await this.prisma.accountsUser.update({
         where: { id: accountId },
         data: { refreshToken: null },
       });
     } else {
-      await this.prisma.accountCompany.updateMany({
+      await this.prisma.accountCompany.update({
         where: { id: accountId },
         data: { refreshToken: null },
       });
@@ -183,7 +209,7 @@ export class AuthService {
 
     return { message: "Registration successful!" };
   }
-  async check(accountPayload: any) {
+  async check(accountPayload: Account) {
     if (!accountPayload) throw new UnauthorizedException('Invalid Token!');
     const { id, role } = accountPayload;
 

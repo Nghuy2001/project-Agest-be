@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
@@ -6,6 +6,9 @@ import { UploadApiResponse } from 'cloudinary';
 import { CloudinaryService } from 'src/core/cloudinary/cloudinary.service';
 import { EmployerGuard } from './guards/company.guard';
 import { changeStatusDto, createJobDto, updateCompanyDto, updateJobDto } from './dto/company.dto';
+import type { Request } from 'express';
+
+
 
 @Controller('company')
 export class CompanyController {
@@ -18,14 +21,14 @@ export class CompanyController {
   async updateProfile(
     @UploadedFile() logo: Express.Multer.File,
     @Body() body: updateCompanyDto,
-    @Request() req
+    @Req() req: Request
   ) {
     let uploadedImage: UploadApiResponse | null = null;
     if (logo) {
       uploadedImage = await this.cloudinary.uploadImage(logo);
     }
-    const id = req.account.id;
-    return this.companyService.updateProfile(body, id, uploadedImage?.secure_url || undefined);
+    const companyId = req.account.id;
+    return this.companyService.updateProfile(body, companyId, uploadedImage?.secure_url || undefined);
   }
   @Post('job/create')
   @UseGuards(JwtAuthGuard, EmployerGuard)
@@ -33,7 +36,7 @@ export class CompanyController {
   async createJob(
     @UploadedFiles() images: Express.Multer.File[],
     @Body() body: createJobDto,
-    @Request() req) {
+    @Req() req: Request) {
 
     let uploadedImages: string[] = [];
     if (images && images.length > 0) {
@@ -41,26 +44,26 @@ export class CompanyController {
       const results = await Promise.all(uploadPromises);
       uploadedImages = results.map(r => r.secure_url);
     }
-
+    const companyId = req.account.id;
     return this.companyService.createJob(
       body,
-      req.account.id,
+      companyId,
       uploadedImages
     );
   }
 
   @Get('job/list')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async getJobList(@Request() req, @Query('page') page: string) {
+  async getJobList(@Req() req: Request, @Query('page') page: string) {
     const accountCompany = req.account;
     const pageNumber = page ? parseInt(page, 10) : 1;
     return this.companyService.getJobList(accountCompany, pageNumber);
   }
   @Get('job/edit/:id')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async getJobDetail(@Request() req, @Param('id') id: string) {
-    const accountCompany = req.account;
-    return this.companyService.getJobDetail(accountCompany, id);
+  async getJobDetail(@Req() req: Request, @Param('id') id: string) {
+    const companyId = req.account.id;
+    return this.companyService.getJobDetail(companyId, id);
   }
   @Patch('job/edit/:id')
   @UseGuards(JwtAuthGuard, EmployerGuard)
@@ -68,7 +71,7 @@ export class CompanyController {
   async patchJobDetail(
     @UploadedFiles() images: Express.Multer.File[],
     @Body() body: updateJobDto,
-    @Request() req,
+    @Req() req: Request,
     @Param('id') id: string) {
     let uploadedImages: string[] = [];
 
@@ -77,20 +80,22 @@ export class CompanyController {
       const results = await Promise.all(uploadPromises);
       uploadedImages = results.map(r => r.secure_url);
     }
-
-    return this.companyService.patchJobDetail(req.account, body, id, uploadedImages);
+    const companyId = req.account.id;
+    return this.companyService.patchJobDetail(companyId, body, id, uploadedImages);
   }
 
   @Delete('job/delete/:id')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async deleteJob(@Request() req, @Param('id') id: string) {
-    return this.companyService.deleteJob(req.account, id);
+  async deleteJob(@Req() req: Request, @Param('id') id: string) {
+    const companyId = req.account.id;
+    return this.companyService.deleteJob(companyId, id);
   }
 
   @Patch('job/change-display/:id')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async changeDisplay(@Request() req, @Param('id') id: string) {
-    return this.companyService.changeDisplay(req.account, id);
+  async changeDisplay(@Req() req: Request, @Param('id') id: string) {
+    const companyId = req.account.id;
+    return this.companyService.changeDisplay(companyId, id);
   }
 
   @Get('list')
@@ -106,24 +111,28 @@ export class CompanyController {
 
   @Get('cv/list')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async cvList(@Request() req, @Query('page') page?: string) {
-    return this.companyService.cvList(req.account.id, page);
+  async cvList(@Req() req: Request, @Query('page') page?: string) {
+    const companyId = req.account.id;
+    return this.companyService.cvList(companyId, page);
   }
   @Get('cv/detail/:id')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async cvDetail(@Param('id') id: string, @Request() req) {
-    return this.companyService.cvDetail(id, req.account.id);
+  async cvDetail(@Param('id') id: string, @Req() req: Request) {
+    const companyId = req.account.id;
+    return this.companyService.cvDetail(id, companyId);
   }
 
   @Patch('cv/change-status')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async changeStatusPatch(@Request() req, @Body() body: changeStatusDto) {
-    return this.companyService.changeStatusPatch(body, req.account.id);
+  async changeStatusPatch(@Req() req: Request, @Body() body: changeStatusDto) {
+    const companyId = req.account.id;
+    return this.companyService.changeStatusPatch(body, companyId);
   }
   @Delete('cv/delete/:id')
   @UseGuards(JwtAuthGuard, EmployerGuard)
-  async deleteCV(@Request() req, @Param('id') id: string) {
-    return this.companyService.deleteCV(req.account.id, id);
+  async deleteCV(@Req() req: Request, @Param('id') id: string) {
+    const companyId = req.account.id;
+    return this.companyService.deleteCV(companyId, id);
   }
 
 }

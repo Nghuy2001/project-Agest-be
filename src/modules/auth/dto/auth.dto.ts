@@ -4,7 +4,7 @@ import { UserRole } from "../types/auth.type";
 export class loginDto {
   @IsNotEmpty({ message: 'Email is required.' })
   @IsEmail({}, { message: 'Email must be a valid email address.' })
-  email: string;
+  email!: string;
 
   @IsNotEmpty({ message: 'Password is required!' })
   @MinLength(8, { message: 'Password must be at least 8 characters!' })
@@ -12,16 +12,16 @@ export class loginDto {
   @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter!' })
   @Matches(/\d/, { message: 'Password must contain at least one number!' })
   @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
-  password: string;
+  password!: string;
 }
 export class registerCompanyDto {
   @IsNotEmpty({ message: 'Company name is required.' })
   @MaxLength(200, { message: 'Company name must not exceed 200 characters.' })
-  companyName: string;
+  companyName!: string;
 
   @IsNotEmpty({ message: 'Email is required.' })
   @IsEmail({}, { message: 'Email must be a valid email address.' })
-  email: string;
+  email!: string;
 
   @IsNotEmpty({ message: 'Password is required!' })
   @MinLength(8, { message: 'Password must be at least 8 characters!' })
@@ -29,18 +29,18 @@ export class registerCompanyDto {
   @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter!' })
   @Matches(/\d/, { message: 'Password must contain at least one number!' })
   @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
-  password: string;
+  password!: string;
 }
 
 export class registerUserDto {
   @IsNotEmpty({ message: 'Full name is required!' })
   @MinLength(5, { message: 'Full name must be at least 5 characters long!' })
   @MaxLength(50, { message: 'Full name cannot exceed 50 characters!' })
-  fullName: string;
+  fullName!: string;
 
   @IsNotEmpty({ message: 'Email is required!' })
   @IsEmail({}, { message: 'Email is not valid!' })
-  email: string;
+  email!: string;
 
   @IsNotEmpty({ message: 'Password is required!' })
   @MinLength(8, { message: 'Password must be at least 8 characters long!' })
@@ -48,12 +48,12 @@ export class registerUserDto {
   @Matches(/[a-z]/, { message: 'Password must contain at least one lowercase letter!' })
   @Matches(/\d/, { message: 'Password must contain at least one number!' })
   @Matches(/[@$!%*?&]/, { message: 'Password must contain at least one special character!' })
-  password: string;
+  password!: string;
 }
 
 export class googleAuthQueryDto {
   @IsEnum(['candidate', 'employer'])
-  role: UserRole;
+  role!: UserRole;
 
   @IsOptional()
   @IsString()

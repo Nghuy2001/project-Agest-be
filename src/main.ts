@@ -3,13 +3,15 @@ import { AppModule } from './main.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
+  const configService = app.get(ConfigService);
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: process.env.FE_URL,
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Authorization',
@@ -20,7 +22,8 @@ async function bootstrap() {
     forbidNonWhitelisted: false,
     transform: true,
   }));
-  await app.listen(4000);
+  const port = configService.get<number>('port') || 4000;
+  await app.listen(port);
   console.log(`Server is running 4000`)
 }
 bootstrap();

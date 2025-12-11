@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import type { Response, Request } from 'express';
@@ -7,6 +7,7 @@ import { googleAuthQueryDto, loginDto, registerCompanyDto, registerUserDto } fro
 import { AuthGuard } from '@nestjs/passport';
 import { UserRole } from './types/auth.type';
 import { AUTH_COOKIE, ENV, TOKEN_EXPIRATION } from 'src/core/constants/auth.constants';
+import { GoogleUser } from 'src/core/interfaces/google-user.interface';
 @Controller('auth')
 export class AuthController {
   private readonly isProd = process.env.NODE_ENV === 'production';
@@ -43,12 +44,12 @@ export class AuthController {
   }
 
   private async handleOldTokens(req: Request, res: Response) {
-    const oldAccessToken = req.cookies['accessToken'];
-    const oldRefreshToken = req.cookies['refreshToken'];
+    const oldAccessToken = req.cookies[AUTH_COOKIE.ACCESS_TOKEN];
+    const oldRefreshToken = req.cookies[AUTH_COOKIE.REFRESH_TOKEN];
 
     if (oldAccessToken || oldRefreshToken) {
-      res.clearCookie('accessToken');
-      res.clearCookie('refreshToken');
+      res.clearCookie(AUTH_COOKIE.ACCESS_TOKEN);
+      res.clearCookie(AUTH_COOKIE.REFRESH_TOKEN);
 
       if (oldRefreshToken) {
         try {
@@ -116,8 +117,8 @@ export class AuthController {
 
     const role = decoded.role;
     const redirectTo = this.getSafeRedirectUrl(decoded.redirectTo);
-    const userGoogle = req.user;
-    const tokens = await this.authService.handleGoogleLogin(userGoogle, role);
+    if (!req.user) throw new UnauthorizedException();
+    const tokens = await this.authService.handleGoogleLogin(req.user as GoogleUser, role);
     this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken)
 
     return res.redirect(redirectTo);
@@ -163,23 +164,23 @@ export class AuthController {
 
   @Get('check')
   @UseGuards(JwtAuthGuard)
-  async check(@Req() req, @Res({ passthrough: true }) res: Response) {
+  async check(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     try {
       return this.authService.check(req.account);
     } catch (error) {
-      res.clearCookie('accessToken');
-      res.clearCookie('refreshToken');
+      res.clearCookie(AUTH_COOKIE.ACCESS_TOKEN);
+      res.clearCookie(AUTH_COOKIE.REFRESH_TOKEN);
       console.log(error)
       throw error;
     }
   }
   @Get('logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const token = req.cookies['refreshToken'];
+    const token = req.cookies[AUTH_COOKIE.REFRESH_TOKEN];
     await this.authService.logoutFromDB(token);
 
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    res.clearCookie(AUTH_COOKIE.ACCESS_TOKEN);
+    res.clearCookie(AUTH_COOKIE.REFRESH_TOKEN);
     return { code: 'success', message: 'Signed out!' };
   }
 }

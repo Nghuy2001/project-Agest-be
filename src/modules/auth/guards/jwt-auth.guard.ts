@@ -3,6 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import type { Response } from 'express';
 import { UserRole } from '../types/auth.type';
+import { AUTH_COOKIE } from 'src/core/constants/auth.constants';
+import { Account } from 'src/core/interfaces/account.interface';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -11,7 +13,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly prisma: PrismaService,
   ) { }
 
-  private async clearRefreshToken(account: any) {
+  private async clearRefreshToken(account: Account) {
     if (account.role === UserRole.candidate) {
       await this.prisma.accountsUser.update({
         where: { id: account.id },
@@ -25,7 +27,7 @@ export class JwtAuthGuard implements CanActivate {
     }
   }
 
-  private async refreshAccessToken(payload: any, refreshToken: string, response: Response) {
+  private async refreshAccessToken(payload: Account, refreshToken: string, response: Response) {
     const account = await this.prisma.accountsUser.findUnique({ where: { id: payload.id } })
       || await this.prisma.accountCompany.findUnique({ where: { id: payload.id } });
 
@@ -51,8 +53,9 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const response: Response = context.switchToHttp().getResponse();
-    const accessToken = request.cookies?.accessToken;
-    const refreshToken = request.cookies?.refreshToken;
+    const accessToken = request.cookies?.[AUTH_COOKIE.ACCESS_TOKEN];
+    const refreshToken = request.cookies?.[AUTH_COOKIE.REFRESH_TOKEN];
+
 
     if (!accessToken && !refreshToken) {
       throw new UnauthorizedException('No token provided');
@@ -64,7 +67,7 @@ export class JwtAuthGuard implements CanActivate {
         request.account = payload;
         return true;
       } catch {
-        response.clearCookie('accessToken');
+        response.clearCookie(AUTH_COOKIE.ACCESS_TOKEN);
       }
     }
 

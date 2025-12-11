@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { PartialType } from '@nestjs/mapped-types';
-import { IsEmail, IsNotEmpty, MaxLength, IsOptional, IsString, IsNumberString, IsIn, ValidateIf } from 'class-validator';
+import { CVStatus } from '@prisma/client';
+import { IsEmail, IsNotEmpty, MaxLength, IsOptional, IsString, IsNumberString, ValidateIf, IsEnum } from 'class-validator';
 
 
 export class updateCompanyDto {
@@ -52,13 +53,13 @@ export class updateCompanyDto {
 
 export class createJobDto {
   @IsNotEmpty({ message: 'Job title is required!' })
-  title: string;
+  title!: string;
 
   @IsNumberString({}, { message: 'Minimum salary must be a number!' })
-  salaryMin: string;
+  salaryMin!: string;
 
   @IsNumberString({}, { message: 'Maximum salary must be a number!' })
-  salaryMax: string;
+  salaryMax!: string;
   @ValidateIf(o => o.salaryMin && o.salaryMax)
   validateSalary() {
     if (parseInt(this.salaryMin) > parseInt(this.salaryMax)) {
@@ -85,12 +86,10 @@ export class createJobDto {
 export class updateJobDto extends PartialType(createJobDto) { }
 
 export class changeStatusDto {
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['approved', 'rejected', 'initial'])
-  action: string;
+  @IsEnum(CVStatus)
+  action!: CVStatus;
 
   @IsString()
   @IsNotEmpty()
-  id: string;
+  id!: string;
 }

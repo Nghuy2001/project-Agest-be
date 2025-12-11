@@ -1,43 +1,47 @@
-import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { cleanObject } from 'src/core/helpers/cleanObject';
 import { createSearch } from 'src/core/helpers/createSearch';
+import { changeStatusDto, createJobDto, updateCompanyDto, updateJobDto } from './dto/company.dto';
 @Injectable()
 export class CompanyService {
   constructor(private readonly prisma: PrismaService
   ) { }
 
-  async updateProfile(body: any, id: any, logoUrl?: string) {
+  async updateProfile(body: updateCompanyDto, id: string, logoUrl?: string) {
     try {
-      if (logoUrl) {
-        body.logo = logoUrl;
-      }
+      const updateData: any = { ...body };
 
-      for (const key in body) {
-        if (body[key] === '') {
-          body[key] = null;
+      if (logoUrl) {
+        updateData.logo = logoUrl;
+      }
+      for (const key in updateData) {
+        if (updateData[key] === '') {
+          updateData[key] = null;
         }
       }
+
       await this.prisma.accountCompany.update({
-        where: { id: id },
-        data: body,
+        where: { id },
+        data: updateData,
       });
+
       return {
         code: "success",
-        message: "Profile updated successfully!"
+        message: "Profile updated successfully!",
       };
     } catch (error) {
       throw new BadRequestException("Unable to update profile!");
     }
   }
 
-  async createJob(body: any, companyId: any, images?: string[]) {
+  async createJob(body: createJobDto, companyId: string, images?: string[]) {
     const dataToCreate: any = { ...body };
     dataToCreate.salaryMin = parseInt(dataToCreate.salaryMin ?? '0', 10);
     dataToCreate.salaryMax = parseInt(dataToCreate.salaryMax ?? '0', 10);
 
     dataToCreate.technologies = dataToCreate.technologies
-      ? dataToCreate.technologies.split(",").map(t => t.trim()).filter(Boolean)
+      ? dataToCreate.technologies.split(",").map((t: any) => t.trim()).filter(Boolean)
       : [];
     dataToCreate.images = images || [];
     const data = cleanObject(dataToCreate);
@@ -57,97 +61,69 @@ export class CompanyService {
     };
 
   }
-  async getJobList(companyAccount: any, page: number) {
-    const find = {
-      companyId: companyAccount.id,
-    };
-    const limitItems = 2;
-    page = Number(page);
-    if (!page || page <= 0) page = 1;
-    const totalRecord = await this.prisma.job.count({
-      where: find,
-    });
-    const totalPage = Math.ceil(totalRecord / limitItems);
+  async getJobList(company: { id: string }, page = 1) {
+    const limit = 6;
+    const skip = (page - 1) * limit;
 
-    const skip = (page - 1) * limitItems;
+    const [total, jobs, companyInfo] = await this.prisma.$transaction([
+      this.prisma.job.count({ where: { companyId: company.id } }),
 
-    const jobs = await this.prisma.job.findMany({
-      where: find,
-      orderBy: { createdAt: "desc" },
-      take: limitItems,
-      skip: skip,
-    });
-    const accountCompany = await this.prisma.accountCompany.findUnique({
-      where: { id: companyAccount.id },
-    });
-    if (!accountCompany) {
-      return {
-        code: "error",
-        message: "Company not found!"
-      };
-    }
-    let cityName: string | undefined = undefined;
+      this.prisma.job.findMany({
+        where: { companyId: company.id },
+        take: limit,
+        skip,
+        orderBy: { createdAt: 'desc' },
+      }),
 
-    if (typeof accountCompany.cityId === "string" && accountCompany.cityId.trim() !== "") {
-      const city = await this.prisma.city.findUnique({
-        where: { id: accountCompany.cityId },
-      });
-      cityName = city?.name;
-    }
+      this.prisma.accountCompany.findUnique({
+        where: { id: company.id },
+        include: { city: true },
+      }),
+    ]);
 
-    const dataFinal: any[] = [];
-    for (const item of jobs) {
-      dataFinal.push({
-        id: item.id,
-        companyLogo: accountCompany.logo,
-        title: item.title,
-        companyName: accountCompany.companyName,
-        salaryMin: item.salaryMin,
-        salaryMax: item.salaryMax,
-        position: item.position,
-        workingForm: item.workingForm,
-        companyCity: cityName,
-        technologies: item.technologies,
-        display: item.display
-      });
-    }
+    if (!companyInfo) throw new NotFoundException('Company not found');
+
+    const data = jobs.map((job) => ({
+      id: job.id,
+      companyLogo: companyInfo.logo,
+      companyName: companyInfo.companyName,
+      cityName: companyInfo.city?.name,
+      title: job.title,
+      salaryMin: job.salaryMin,
+      salaryMax: job.salaryMax,
+      position: job.position,
+      workingForm: job.workingForm,
+      technologies: job.technologies,
+      display: job.display,
+    }));
+
     return {
-      code: "success",
-      message: "Job list retrieved successfully!",
-      dataFinal,
-      totalPage
-    }
+      code: 'success',
+      message: 'Job list',
+      dataFinal: data,
+      totalPage: Math.ceil(total / limit),
+    };
   }
-  async getJobDetail(companyAccount: any, id: string) {
-    try {
-      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
-      if (!jobDetail) {
-        throw new NotFoundException("Job ID does not exist!");
-      }
 
-      return {
-        code: "success",
-        message: "Job details retrieved successfully!",
-        jobDetail: jobDetail
-      }
-    } catch (error) {
-      throw new HttpException(
-        "Server error, please try again later!",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+  async getJobDetail(companyId: string, jobId: string) {
+    const jobDetail = await this.prisma.job.findFirst({
+      where: { id: jobId, companyId: companyId },
+    });
 
+    if (!jobDetail) throw new NotFoundException('Job not found');
+
+    return { code: 'success', message: 'Job detail', jobDetail };
   }
-  async patchJobDetail(companyAccount: any, body: any, id: string, images?: string[]) {
+  async patchJobDetail(companyId: string, body: updateJobDto, id: string, images?: string[]) {
     try {
-      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
+      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyId } });
       if (!jobDetail) {
         throw new NotFoundException("Job ID does not exist!");
       }
       const dataToUpdate: any = { ...body };
       dataToUpdate.salaryMin = body.salaryMin !== undefined ? (body.salaryMin !== "" ? parseInt(body.salaryMin) || 0 : 0) : jobDetail.salaryMin;
       dataToUpdate.salaryMax = body.salaryMax !== undefined ? (body.salaryMax !== "" ? parseInt(body.salaryMax) || 0 : 0) : jobDetail.salaryMax;
-      dataToUpdate.technologies = body.technologies !== undefined ? (body.technologies ? body.technologies.split(",").map((t) => t.trim()) : []) : jobDetail.technologies;
+      dataToUpdate.technologies = body.technologies !== undefined ? (body.technologies ? body.technologies.split(",").map((t: any) => t.trim()) : []) : jobDetail.technologies;
       dataToUpdate.images = images && images.length > 0 ? images : jobDetail.images;
       const data = cleanObject(dataToUpdate);
       data.search = createSearch(`${data.title} ${data.technologies.join(" ")}`);
@@ -161,35 +137,37 @@ export class CompanyService {
         message: "Job updated successfully!"
       }
     } catch (error) {
-      throw new HttpException(
-        "Server error, please try again later!",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      throw error;
     }
-
   }
 
-  async deleteJob(companyAccount: any, id: string) {
-    try {
-      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
+  async deleteJob(companyId: string, id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const jobDetail = await tx.job.findFirst({
+        where: { id, companyId: companyId },
+      });
+
       if (!jobDetail) {
         throw new NotFoundException("Job ID does not exist!");
       }
-      await this.prisma.job.delete({ where: { id: id } });
+
+      await tx.cV.deleteMany({
+        where: { jobId: id },
+      });
+
+      await tx.job.delete({
+        where: { id },
+      });
+
       return {
         code: "success",
-        message: "Job deleted successfully!"
+        message: "Job deleted successfully!",
       };
-    } catch (error) {
-      throw new HttpException(
-        "Server error, please try again later!",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+    });
   }
-  async changeDisplay(companyAccount: any, id: string) {
+  async changeDisplay(companyId: string, id: string) {
     try {
-      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyAccount.id } });
+      const jobDetail = await this.prisma.job.findFirst({ where: { id: id, companyId: companyId } });
       if (!jobDetail) {
         throw new NotFoundException("Job ID does not exist!");
       }
@@ -205,221 +183,203 @@ export class CompanyService {
         message: "Job changed display successfully!"
       };
     } catch (error) {
-      throw new HttpException(
-        "Server error, please try again later!",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      throw error;
     }
   }
   async listCompanies(query: any) {
-    const pageSize = 6;
-    let page = Number(query.page);
-    if (!page || page <= 0) page = 1;
-    const totalRecord = await this.prisma.accountCompany.count();
-    const totalPage = Math.ceil(totalRecord / pageSize);
-    const skip = (page - 1) * pageSize;
-    const companies = await this.prisma.accountCompany.findMany({
-      take: pageSize,
-      skip: skip,
-      orderBy: { createdAt: "desc" },
-      include: {
-        city: true,
-        _count: {
-          select: { jobs: true }
-        }
-      }
-    });
+    const page = Number(query.page) || 1;
+    const take = 6;
+    const skip = (page - 1) * take;
 
-    const finalData = companies.map(c => ({
-      id: c.id,
-      logo: c.logo,
-      companyName: c.companyName,
-      cityName: c.city?.name || "",
-      totalJob: c._count.jobs
-    }));
-
+    const [total, companies] = await this.prisma.$transaction([
+      this.prisma.accountCompany.count(),
+      this.prisma.accountCompany.findMany({
+        take,
+        skip,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          city: true,
+          _count: { select: { jobs: true } },
+        },
+      }),
+    ]);
     return {
-      code: "success",
-      message: "Company list retrieved successfully!",
-      companyListFinal: finalData,
-      totalPage
+      code: 'success',
+      companyListFinal: companies.map((c) => ({
+        id: c.id,
+        logo: c.logo,
+        companyName: c.companyName,
+        cityName: c.city?.name,
+        totalJob: c._count.jobs,
+      })),
+      totalPage: Math.ceil(total / take),
     };
   }
 
   async detailCompany(id: string) {
+    const company = await this.prisma.accountCompany.findUnique({
+      where: { id },
+      include: {
+        city: true,
+        jobs: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+
+    if (!company) throw new NotFoundException('Company not found');
+
+    return {
+      code: 'success',
+      companyDetail: {
+        id: company.id,
+        logo: company.logo,
+        companyName: company.companyName,
+        address: company.address,
+        companyModel: company.companyModel,
+        companyEmployees: company.companyEmployees,
+        workingTime: company.workingTime,
+        workOvertime: company.workOvertime,
+        description: company.description,
+        cityName: company.city?.name,
+      },
+      jobList: company.jobs.map((j) => ({
+        id: j.id,
+        title: j.title,
+        companyName: company.companyName,
+        salaryMin: j.salaryMin,
+        salaryMax: j.salaryMax,
+        position: j.position,
+        workingForm: j.workingForm,
+        technologies: j.technologies,
+      })),
+    };
+  }
+
+
+  async cvList(companyId: string, page?: string) {
     try {
-      const record = await this.prisma.accountCompany.findUnique({
-        where: { id },
-        include: {
-          city: true,
-          jobs: {
-            orderBy: { createdAt: "desc" }
-          }
-        }
-      })
-      if (!record) {
-        throw new NotFoundException("Invalid company ID!")
+      const pageSize = 2;
+      let pageNumber = Number(page);
+      if (!pageNumber || pageNumber <= 0) pageNumber = 1;
+      const listJobIds = await this.prisma.job.findMany({
+        where: { companyId },
+        select: { id: true }
+      }).then(jobs => jobs.map(j => j.id));
+
+      if (listJobIds.length === 0) {
+        return {
+          code: "success",
+          message: "No CVs found",
+          dataFinal: [],
+          totalPage: 0
+        };
       }
-      const companyDetail = {
-        id: record.id,
-        logo: record.logo,
-        companyName: record.companyName,
-        address: record.address,
-        companyModel: record.companyModel,
-        companyEmployees: record.companyEmployees,
-        workingTime: record.workingTime,
-        workOvertime: record.workOvertime,
-        description: record.description,
-        cityName: record.city?.name ?? ""
-      }
-      const jobList = record.jobs.map(job => ({
+
+      const totalRecord = await this.prisma.cV.count({
+        where: { jobId: { in: listJobIds } }
+      });
+
+      const totalPage = Math.ceil(totalRecord / pageSize);
+      const skip = (pageNumber - 1) * pageSize;
+
+      const listCV = await this.prisma.cV.findMany({
+        where: { jobId: { in: listJobIds } },
+        include: { job: true },
+        take: pageSize,
+        skip,
+        orderBy: { createdAt: "desc" }
+      });
+
+      const dataFinal = listCV.map(item => ({
+        id: item.id,
+        fullName: item.fullName,
+        email: item.email,
+        phone: item.phone,
+        viewed: item.viewed,
+        status: item.status,
+        jobTitle: item.job?.title ?? "",
+        jobSalaryMin: item.job?.salaryMin ?? null,
+        jobSalaryMax: item.job?.salaryMax ?? null,
+        jobPosition: item.job?.position ?? null,
+        jobWorkingForm: item.job?.workingForm ?? null,
+      }));
+
+      return {
+        code: "success",
+        message: "CV list retrieved successfully",
+        dataFinal,
+        totalPage
+      };
+
+    } catch (error) {
+      console.error(error);
+      throw new HttpException(
+        "Server error, please try again later",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  async cvDetail(cvId: string, companyId: string) {
+    const cv = await this.prisma.cV.findUnique({ where: { id: cvId } });
+    if (!cv) throw new NotFoundException('CV not found');
+
+    const job = await this.prisma.job.findFirst({
+      where: { id: cv.jobId, companyId },
+    });
+
+    if (!job) throw new ForbiddenException('No permission');
+    await this.prisma.cV.update({
+      where: { id: cvId },
+      data: { viewed: true },
+    });
+
+    return {
+      code: 'success',
+      infoCV: {
+        fullName: cv.fullName,
+        email: cv.email,
+        phone: cv.phone,
+        fileCV: cv.fileCV,
+      },
+      infoJob: {
         id: job.id,
-        companyLogo: record.logo,
         title: job.title,
-        companyName: record.companyName,
         salaryMin: job.salaryMin,
         salaryMax: job.salaryMax,
         position: job.position,
         workingForm: job.workingForm,
-        companyCity: record.city?.name ?? "",
         technologies: job.technologies,
-      }));
-      return {
-        code: "success",
-        message: "Company detail retrieved successfully!",
-        companyDetail,
-        jobList
-      }
-    } catch (error) {
-      throw new HttpException(
-        "Server error, please try again later!",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+      },
+    };
   }
 
-  async cvList(id: string, page?: string) {
-    const pageSize = 2;
-    let pageNumber = Number(page);
-    if (!pageNumber || pageNumber <= 0) pageNumber = 1;
+  async changeStatusPatch(body: changeStatusDto, companyId: string) {
+    return this.prisma.$transaction(async (tx) => {
 
-    const listJob = await this.prisma.job.findMany({
-      where: { companyId: id }
-    });
-    const listJobId = listJob.map(job => job.id);
-    const totalRecord = await this.prisma.cV.count({
-      where: { jobId: { in: listJobId } }
-    });
-    const totalPage = Math.ceil(totalRecord / pageSize);
-    const skip = (pageNumber - 1) * pageSize;
-    const listCV = await this.prisma.cV.findMany({
-      where: { jobId: { in: listJobId } },
-      take: pageSize,
-      skip,
-      orderBy: { createdAt: "desc" },
-      include: {
-        job: true
-      }
-    });
-    const dataFinal = listCV.map(item => ({
-      id: item.id,
-      fullName: item.fullName,
-      email: item.email,
-      phone: item.phone,
-      viewed: item.viewed,
-      status: item.status,
-      jobTitle: item.job?.title || "",
-      jobSalaryMin: item.job?.salaryMin,
-      jobSalaryMax: item.job?.salaryMax,
-      jobPosition: item.job?.position,
-      jobWorkingForm: item.job?.workingForm,
-    }));
-
-    return {
-      code: "success",
-      message: "CV list retrieved successfully",
-      dataFinal,
-      totalPage
-    }
-  }
-  async cvDetail(cvId: string, companyId: string) {
-    try {
-      const infoCV = await this.prisma.cV.findUnique({
-        where: {
-          id: cvId
-        }
+      const cv = await tx.cV.findUnique({
+        where: { id: body.id },
       });
-      if (!infoCV) throw new NotFoundException(`CV with id ${cvId} not found`)
 
-      const infoJob = await this.prisma.job.findFirst({
-        where: {
-          id: infoCV.jobId,
-          companyId: companyId
-        }
-      })
-      if (!infoJob) throw new ForbiddenException('You do not have permission to access this resource');
-      const dataFinalCV = {
-        fullName: infoCV.fullName,
-        email: infoCV.email,
-        phone: infoCV.phone,
-        fileCV: infoCV.fileCV
-      }
-      const dataFinalJob = {
-        id: infoJob.id,
-        title: infoJob.title,
-        salaryMin: infoJob.salaryMin,
-        salaryMax: infoJob.salaryMax,
-        position: infoJob.position,
-        workingForm: infoJob.workingForm,
-        technologies: infoJob.technologies,
-      }
-      await this.prisma.cV.update({
-        where: { id: cvId },
-        data: { viewed: true },
+      if (!cv) throw new NotFoundException('CV not found');
+
+      const job = await tx.job.findFirst({
+        where: { id: cv.jobId, companyId },
       });
-      return {
-        code: "success",
-        message: "CV details retrieved successfully",
-        infoCV: dataFinalCV,
-        infoJob: dataFinalJob
-      }
-    } catch (error) {
-      throw new HttpException(
-        "Server error, please try again later",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-  async changeStatusPatch(body: any, companyId: string) {
-    try {
-      const infoCV = await this.prisma.cV.findUnique({
-        where: { id: body.id }
-      })
-      if (!infoCV) throw new NotFoundException("Invalid company ID!");
-      const infoJob = await this.prisma.job.findFirst({
-        where: {
-          id: infoCV.jobId,
-          companyId: companyId
-        }
-      })
-      if (!infoJob) {
-        throw new ForbiddenException("You do not have permission to log in here!");
-      }
-      await this.prisma.cV.update({
+
+      if (!job) throw new ForbiddenException('No permission');
+      await tx.cV.update({
         where: { id: body.id },
         data: { status: body.action },
       });
+
       return {
-        code: "success",
-        message: ""
-      }
-    } catch (error) {
-      throw new HttpException(
-        "Server error, please try again later",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+        code: 'success',
+        message: 'Status updated',
+      };
+    });
   }
+
+
   async deleteCV(companyId: string, id: string) {
     try {
       const infoCV = await this.prisma.cV.findFirst({ where: { id: id } });
@@ -433,7 +393,7 @@ export class CompanyService {
         }
       })
       if (!infoJob) {
-        throw new ForbiddenException("You do not have permission to log in here!");
+        throw new ForbiddenException("You do not have permission to delete this CV!");
       }
       await this.prisma.cV.delete({
         where: {
@@ -445,10 +405,7 @@ export class CompanyService {
         message: "CV deleted successfully!"
       };
     } catch (error) {
-      throw new HttpException(
-        "Server error, please try again later!",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      throw error;
     }
   }
 

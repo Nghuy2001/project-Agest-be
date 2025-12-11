@@ -14,5 +14,6 @@ export class updateProfileDto {
   @IsOptional()
   @Matches(/^\d{10,11}$/, { message: 'Phone number must be 10–11 digits!' })
   phone?: string;
-
+  @IsOptional()
+  avatar?: string;
 }
