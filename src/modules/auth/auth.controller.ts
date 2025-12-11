@@ -8,6 +8,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserRole } from './types/auth.type';
 import { AUTH_COOKIE, ENV, TOKEN_EXPIRATION } from 'src/core/constants/auth.constants';
 import { GoogleUser } from 'src/core/interfaces/google-user.interface';
+import { Throttle } from '@nestjs/throttler';
+
 @Controller('auth')
 export class AuthController {
   private readonly isProd = process.env.NODE_ENV === 'production';
@@ -97,6 +99,7 @@ export class AuthController {
   }
 
   @Get('google/redirect')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(AuthGuard('google'))
   async googleRedirect(@Req() req: Request, @Res() res: Response) {
     const { state } = req.query;
@@ -127,6 +130,7 @@ export class AuthController {
 
 
   @Post('company/login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async loginCompany(
     @Body() loginDto: loginDto,
     @Req() req: Request,
@@ -139,11 +143,13 @@ export class AuthController {
     return { message: "Login successful!" };
   }
   @Post('company/register')
+  @Throttle({ default: { limit: 2, ttl: 60000 } })
   async registerCompany(@Body() registerCompanyDto: registerCompanyDto) {
     return this.authService.registerCompany(registerCompanyDto);
   }
 
   @Post('user/login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async loginUser(
     @Body() loginDto: loginDto,
     @Req() req: Request,
@@ -158,6 +164,7 @@ export class AuthController {
   }
 
   @Post('user/register')
+  @Throttle({ default: { limit: 2, ttl: 60000 } })
   async register(@Body() registerUserDto: registerUserDto) {
     return this.authService.registerUser(registerUserDto,);
   }

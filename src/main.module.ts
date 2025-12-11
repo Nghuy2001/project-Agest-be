@@ -11,16 +11,27 @@ import { ConfigModule } from '@nestjs/config';
 import { appConfig } from './config/app.config';
 import { cloudinaryConfig } from './config/cloudinary.config';
 import { googleConfig } from './config/google.config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 10,
+      },
+    ]),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig, cloudinaryConfig, googleConfig],
     }),
     PrismaModule, UploadModule, SearchModule, CityModule, UserModule, CompanyModule, AuthModule, JobModule],
   controllers: [],
-  providers: [],
+  providers: [{
+    provide: APP_GUARD,
+    useClass: ThrottlerGuard,
+  },],
 })
 export class AppModule { }
